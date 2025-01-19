@@ -1,4 +1,4 @@
-name: CI
+name: Tests/Rustfmt/Clippy
 
 concurrency:
   group: ${{ github.ref }}
@@ -11,6 +11,11 @@ on:
   pull_request:
     branches:
       - master
+
+  schedule:
+    - cron: '0 0 * * *'  # every day at 00:00
+
+  workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always
@@ -104,6 +109,6 @@ jobs:
           components: clippy
 
       - uses: Swatinem/rust-cache@v2
-      
+
       - name: Check with clippy
         run: cargo clippy --all
