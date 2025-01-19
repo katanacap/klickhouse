@@ -16,7 +16,38 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { rust: stable, os: ubuntu-22.04 }
+          - { rust: stable, os: ubuntu-24.04 }
+    services:
+      clickhouse:
+        image: clickhouse/clickhouse-server:24.8.12.28
+        ports:
+          - 9000:9000
+        options: >-
+          --ulimit nofile=262144:262144
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ matrix.rust }}
+          components: rustfmt
+      - name: Build with all features
+        run: cargo build --all-features
+      - name: Build
+        run: cargo build --workspace --verbose
+      - name: Run tests
+        run: cargo test --workspace --all-features
+      - name: Clean
+        run: cargo clean
+
+  tests_nightly:
+    name: Run nightly tests - Rust (${{ matrix.rust }}) on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { rust: nightly-2025-01-19, os: ubuntu-24.04 }
     services:
       clickhouse:
         image: clickhouse/clickhouse-server:24.8.12.28
@@ -47,7 +78,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { rust: 1.75.0, os: ubuntu-22.04 }
+          - { rust: 1.75.0, os: ubuntu-24.04 }
     services:
       clickhouse:
         image: clickhouse/clickhouse-server:24.8.12.28
@@ -80,7 +111,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { rust: nightly-2024-03-31, os: ubuntu-22.04 }
+          - { rust: nightly-2025-01-19, os: ubuntu-24.04 }
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -104,7 +135,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { rust: stable, os: ubuntu-22.04 }
+          - { rust: stable, os: ubuntu-24.04 }
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -125,7 +156,7 @@ jobs:
   #     fail-fast: false
   #     matrix:
   #       include:
-  #         - { rust: stable, os: ubuntu-22.04 }
+  #         - { rust: stable, os: ubuntu-24.04 }
   #   steps:
   #     - name: Checkout
   #       uses: actions/checkout@v4
