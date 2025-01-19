@@ -12,6 +12,8 @@
       pkgs.rustup
       pkgs.sccache
       pkgs.cargo-outdated
+      pkgs.cargo-nextest
+      pkgs.just
   ] ++ lib.optionals pkgs.stdenv.isDarwin (with pkgs.darwin.apple_sdk; [
        frameworks.SystemConfiguration
        frameworks.Security
@@ -23,7 +25,6 @@
 
 
   languages.rust.enable = true;
-
   env.RUSTC_WRAPPER = "${pkgs.sccache}/bin/sccache";
   # languages.rust.mold.enable = true;
 
