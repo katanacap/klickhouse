@@ -96,7 +96,7 @@ impl<'a> ClickhouseLockHandle<'a> {
     }
 }
 
-impl<'a> Drop for ClickhouseLockHandle<'a> {
+impl Drop for ClickhouseLockHandle<'_> {
     fn drop(&mut self) {
         if let Some(lock) = self.lock.take().cloned() {
             tokio::spawn(async move {

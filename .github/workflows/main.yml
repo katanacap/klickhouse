@@ -19,7 +19,7 @@ jobs:
           - { rust: stable, os: ubuntu-22.04 }
     services:
       clickhouse:
-        image: clickhouse/clickhouse-server:24.3.1
+        image: clickhouse/clickhouse-server:24.8.12.28
         ports:
           - 9000:9000
         options: >-
@@ -50,7 +50,7 @@ jobs:
           - { rust: 1.75.0, os: ubuntu-22.04 }
     services:
       clickhouse:
-        image: clickhouse/clickhouse-server:24.3.1
+        image: clickhouse/clickhouse-server:24.8.12.28
         ports:
           - 9000:9000
         options: >-

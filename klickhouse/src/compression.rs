@@ -156,7 +156,7 @@ impl<'a, R: ClickhouseRead + 'static> DecompressionReader<'a, R> {
     }
 }
 
-impl<'a, R: ClickhouseRead + 'static> AsyncRead for DecompressionReader<'a, R> {
+impl<R: ClickhouseRead + 'static> AsyncRead for DecompressionReader<'_, R> {
     fn poll_read(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,

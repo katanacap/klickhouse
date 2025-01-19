@@ -14,7 +14,7 @@ async fn main() {
     env_logger::Builder::new()
         .parse_env(env_logger::Env::default().default_filter_or("info"))
         .init();
-    let manager = ConnectionManager::new("127.0.0.1:9000", ClientOptions::default())
+    let manager = ConnectionManager::new("127.0.0.1:9111", ClientOptions::default())
         .await
         .unwrap();
 
