@@ -1,6 +1,10 @@
-# Klickhouse
+# Klickhouse (Fork by Katana Capital)
 
-Klickhouse is a pure Rust SDK for working with [Clickhouse](https://clickhouse.tech/docs/en/) with the native protocol in async environments with minimal boilerplate and maximal performance.
+NOTICE: This repository is a fork of [Protryon/klickhouse](https://github.com/Protryon/klickhouse). Since the upstream repository has not been updated for some time, we at Katana Capital decided to maintain our own fork in an open-source manner. We extend our deepest gratitude to the original author for creating this wonderful crate, and hope they are not inconvenienced by our decision to continue development under our organization.
+
+## About the Project
+
+Klickhouse is a pure Rust SDK for working with ClickHouse via its native protocol in asynchronous environments. The aim is to reduce boilerplate code while maximizing performance.
 
 ## Example Usage
 
