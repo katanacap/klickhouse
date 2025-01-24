@@ -8,7 +8,7 @@ Klickhouse is a pure Rust SDK for working with ClickHouse via its native protoco
 
 ## Example Usage
 
-See [example usage](https://github.com/Protryon/klickhouse/blob/master/klickhouse/examples/basic.rs).
+See [example usage](https://github.com/katanacap/klickhouse/blob/master/klickhouse/examples/basic.rs).
 
 ## Unsupported Features
 
