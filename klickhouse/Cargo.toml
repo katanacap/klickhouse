@@ -4,10 +4,10 @@
 [package]
 name = "klickhouse"
 version = "0.13.3"
-authors = ["Protryon <max.bruce12@gmail.com>"]
+authors = ["Protryon <max.bruce12@gmail.com>", "kioqq <kioqq@pm.me>"]
 edition = "2021"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/Protryon/klickhouse"
+repository = "https://github.com/katana/klickhouse"
 description = "Klickhouse is a pure Rust SDK for working with Clickhouse with the native protocol in async environments with minimal boilerplate and maximal performance."
 keywords = ["clickhouse", "database", "tokio", "sql"]
 readme = "../README.md"
