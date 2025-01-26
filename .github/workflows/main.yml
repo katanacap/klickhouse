@@ -1,4 +1,4 @@
-name: Tests/Rustfmt/Clippy
+name: Tests/Rustfmt/Clippy/Audit
 
 concurrency:
   group: ${{ github.ref }}
@@ -129,9 +129,11 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ matrix.rust }}
-          components: audit
-
+      
       - uses: Swatinem/rust-cache@v2
+
+      - name: Install cargo-audit
+        run: cargo install cargo-audit
 
       - name: Check with audit
         run: cargo audit
