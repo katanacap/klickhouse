@@ -1,9 +1,9 @@
 # Justfile
 
-# По умолчанию запускаем полную проверку (check)
+# By default, run a full check (check)
 default: check
 
-# Полная проверка: fmt (проверка), clippy, тесты
+# Full check: fmt (format check), clippy, tests
 check:
     @echo "==> Checking format..."
     cargo fmt --all -- --check
@@ -16,37 +16,42 @@ check:
 
     @echo "All checks passed!"
 
-# Форматирование кода
+# Code formatting
 fmt:
     @echo "==> Formatting code..."
     cargo fmt --all
 
-# Запуск Clippy
+# Running Clippy
 clippy:
     @echo "==> Clippy linting..."
     cargo clippy --all-targets --all-features -- -D warnings
 
-# Запуск тестов (nextest)
+# Running tests (nextest)
 test:
     @echo "==> Running tests (debug)..."
     cargo nextest run --workspace --all-features
 
-# Тесты в release-сборке
+# Running tests in release build
 test-release:
     @echo "==> Running tests (release)..."
     cargo nextest run --workspace --all-features --release
 
-# Генерация (и открытие) документации
+# Generating (and opening) documentation
 doc:
     @echo "==> Building docs..."
     cargo doc --no-deps --all-features --open
 
-# Проверка устаревших зависимостей
+# Checking for outdated dependencies
 outdated:
     @echo "==> Checking outdated dependencies..."
     cargo outdated
 
-# Обновление зависимостей
+# Updating dependencies
 update:
     @echo "==> Updating dependencies..."
     cargo update
+
+# Checking dependencies for vulnerabilities
+audit:
+    @echo "==> Auditing dependencies..."
+    cargo audit

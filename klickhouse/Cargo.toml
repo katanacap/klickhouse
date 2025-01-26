@@ -35,7 +35,7 @@ name = "basic"
 #  Dependencies
 ###################################
 [dependencies]
-# -- Основные зависимости --
+# -- Main dependencies --
 tokio = { version = "1.43.0", features = ["io-util", "net", "rt", "macros"] }
 async-trait = "0.1.85"
 thiserror = "2.0.11"
@@ -51,12 +51,12 @@ compiler-tools = "0.2.0"
 compiler-tools-derive = "0.2.0"
 paste = "1.0.15"
 
-# -- Опциональные зависимости --
+# -- Optional dependencies --
 lz4 = { version = "1.28.1", optional = true }
 bb8 = { version = "0.9.0", optional = true }
 klickhouse_derive = { version = "=0.13.0", optional = true, path = "../klickhouse_derive" }
 
-# refinery-core приходится фиксировать версию из-за проблемы с transmute
+# refinery-core version must be locked due to a transmute issue
 refinery-core = { version = "=0.8.14", optional = true } # must be locked due to transmute
 
 time = { version = "0.3.37", features = ["parsing", "formatting"], optional = true }
@@ -75,36 +75,43 @@ tokio = { version = "1.43.0", features = ["rt-multi-thread"] }
 env_logger = "0.11.6"
 
 ###################################
+#  Security fixes
+###################################
+[patch.crates-io]
+idna = "1.0.3"
+url = "2.5.4"
+
+###################################
 #  Features
 ###################################
 [features]
-# Подключаются по умолчанию
+# Enabled by default
 default = ["derive", "compression", "serde"]
 
-# Для генерации derive-макросов
+# For generating derive macros
 derive = ["klickhouse_derive"]
 
-# Для работы со сжатием
+# For compression support
 compression = ["lz4"]
 
-# Геометрические типы
+# Geometric types
 geo-types = ["dep:geo-types"]
 
-# Для миграций (refinery) и типов Time
+# For migrations (refinery) and Time types
 refinery = ["refinery-core", "time"]
 
-# Поддержка serde-сериализации
+# Serde serialization support
 serde = [
     "dep:serde",
     "serde_json",
-    "uuid/serde",      # включает serde в uuid
-    "chrono/serde"    # включает serde в chrono
+    "uuid/serde",      # enables serde in uuid
+    "chrono/serde"    # enables serde in chrono
 ]
 
-# TLS поддержка
+# TLS support
 tls = ["tokio-rustls", "rustls-pki-types"]
 
-# Пулл подключений (bb8)
+# Connection pooling (bb8)
 bb8 = ["dep:bb8"]
 
 ###################################

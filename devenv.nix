@@ -13,6 +13,7 @@
       pkgs.sccache
       pkgs.cargo-outdated
       pkgs.cargo-nextest
+      pkgs.cargo-audit
       pkgs.just
   ] ++ lib.optionals pkgs.stdenv.isDarwin (with pkgs.darwin.apple_sdk; [
        frameworks.SystemConfiguration
