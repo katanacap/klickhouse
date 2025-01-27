@@ -32,8 +32,6 @@ async fn test_client() {
     )
     .await;
 
-    println!("begin insert");
-
     let block = TestType {
         d_u8: BigDecimal::from(255u8),
         d_u16: BigDecimal::from(65_535u16),
