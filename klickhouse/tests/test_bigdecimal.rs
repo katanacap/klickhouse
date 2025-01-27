@@ -18,14 +18,19 @@ async fn test_client() {
         .try_init();
     let client = super::get_client().await;
 
-    super::prepare_table("test_bigdecimal", r"
+    super::prepare_table(
+        "test_bigdecimal",
+        r"
         d_u8 UInt8 default 0,
         d_u16 UInt16 default 0,
         d_u32 UInt32 default 0,
         d_u64 UInt64 default 0,
         d_u128 UInt128 default 0,
         d_u256 UInt256 default 0,
-    ", &client).await;
+    ",
+        &client,
+    )
+    .await;
 
     println!("begin insert");
 
@@ -35,7 +40,11 @@ async fn test_client() {
         d_u32: BigDecimal::from(4_294_967_295u32),
         d_u64: BigDecimal::from(18_446_744_073_709_551_615u64),
         d_u128: BigDecimal::from(340_282_366_920_938_463_463_374_607_431_768_211_455u128),
-        d_u256: BigDecimal::from_str_radix("57896044618658097711785492504343953926634992332820282019728792003956564819966", 10).expect("cant parse u256"),
+        d_u256: BigDecimal::from_str_radix(
+            "57896044618658097711785492504343953926634992332820282019728792003956564819966",
+            10,
+        )
+        .expect("cant parse u256"),
     };
 
     client
@@ -52,6 +61,9 @@ async fn test_client() {
         .unwrap();
 
     assert_eq!(block.d_u8, block2.d_u8);
-
-    println!("done");
+    assert_eq!(block.d_u16, block2.d_u16);
+    assert_eq!(block.d_u32, block2.d_u32);
+    assert_eq!(block.d_u64, block2.d_u64);
+    assert_eq!(block.d_u128, block2.d_u128);
+    assert_eq!(block.d_u256, block2.d_u256);
 }
