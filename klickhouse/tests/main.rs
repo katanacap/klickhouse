@@ -1,6 +1,8 @@
 pub mod test;
 pub mod test_bytes;
 pub mod test_decimal;
+
+pub mod test_bigdecimal;
 pub mod test_flatten;
 #[cfg(feature = "geo-types")]
 pub mod test_geo;

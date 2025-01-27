@@ -29,6 +29,9 @@ pub use ip::*;
 #[cfg(test)]
 mod tests;
 
+#[cfg(feature = "bigdecimal")]
+mod bigdecimal;
+
 /// A raw Clickhouse value.
 /// Types are not strictly/completely preserved (i.e. types `String` and `FixedString` both are value `String`).
 /// Use this if you want dynamically typed queries.
