@@ -29,7 +29,7 @@ jobs:
       matrix:
         include:
           - { rust: stable, os: ubuntu-24.04, jobname: "stable" }
-          - { rust: nightly-2025-01-19, os: ubuntu-24.04, jobname: "nightly" }
+          - { rust: nightly, os: ubuntu-24.04, jobname: "nightly" }
           - { rust: "1.75.0", os: ubuntu-24.04, jobname: "min_compat" }
     services:
       clickhouse:
@@ -71,7 +71,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { rust: nightly-2025-01-19, os: ubuntu-24.04 }
+          - { rust: nightly, os: ubuntu-24.04 }
     steps:
       - name: Checkout
         uses: actions/checkout@v4

@@ -4,9 +4,9 @@ use bigdecimal::{BigDecimal, ToPrimitive};
 
 impl FromSql for BigDecimal {
     fn from_sql(type_: &Type, value: Value) -> Result<Self> {
-        fn out_of_range(name: &str) -> KlickhouseError {
-            KlickhouseError::DeserializeError(format!("{name} out of bounds for rust_decimal"))
-        }
+        // fn out_of_range(name: &str) -> KlickhouseError {
+        //     KlickhouseError::DeserializeError(format!("{name} out of bounds for rust_decimal"))
+        // }
 
         match value {
             Value::Int8(i) => Ok(BigDecimal::from(i).with_scale(0)),
@@ -26,13 +26,13 @@ impl FromSql for BigDecimal {
                 Ok(BigDecimal::from(BigInt::from_signed_bytes_le(i.0.as_slice())).with_scale(0))
             }
             Value::Decimal32(precision, value) => {
-                Ok(BigDecimal::from(value).with_scale(precision as i64))
+                Ok(BigDecimal::new(value.into(), precision as i64))
             }
             Value::Decimal64(precision, value) => {
-                Ok(BigDecimal::from(value).with_scale(precision as i64))
+                Ok(BigDecimal::new(value.into(), precision as i64))
             }
             Value::Decimal128(precision, value) => {
-                Ok(BigDecimal::from(value).with_scale(precision as i64))
+                Ok(BigDecimal::new(value.into(), precision as i64))
             }
             _ => Err(unexpected_type(type_)),
         }
@@ -46,10 +46,18 @@ impl ToSql for BigDecimal {
         }
 
         match type_hint {
-            None => self
-                .to_i128()
-                .map(|val| Value::Decimal128(self.fractional_digit_count() as usize, val))
-                .ok_or_else(|| out_of_range("Decimal128")),
+            None => {
+                if let Some(bi) = self.to_bigint() {
+                    if BigDecimal::from(bi) != self {
+                        return Err(out_of_range("Decimal128"));
+                    }
+                } else {
+                    return Err(out_of_range("Decimal128"));
+                }
+                self.to_i128()
+                    .map(|val| Value::Decimal128(self.fractional_digit_count() as usize, val))
+                    .ok_or_else(|| out_of_range("Decimal128"))
+            }
             Some(Type::Decimal32(precision))
                 if *precision as i64 >= self.fractional_digit_count() =>
             {
@@ -73,43 +81,43 @@ impl ToSql for BigDecimal {
             }
             Some(Type::UInt8) => self
                 .to_u8()
-                .map(|val| Value::UInt8(val))
+                .map(Value::UInt8)
                 .ok_or_else(|| out_of_range("UInt8")),
             Some(Type::Int8) => self
                 .to_i8()
-                .map(|val| Value::Int8(val))
+                .map(Value::Int8)
                 .ok_or_else(|| out_of_range("Int8")),
             Some(Type::UInt16) => self
                 .to_u16()
-                .map(|val| Value::UInt16(val))
+                .map(Value::UInt16)
                 .ok_or_else(|| out_of_range("UInt16")),
             Some(Type::Int16) => self
                 .to_i16()
-                .map(|val| Value::Int16(val))
+                .map(Value::Int16)
                 .ok_or_else(|| out_of_range("Int16")),
             Some(Type::UInt32) => self
                 .to_u32()
-                .map(|val| Value::UInt32(val))
+                .map(Value::UInt32)
                 .ok_or_else(|| out_of_range("UInt32")),
             Some(Type::Int32) => self
                 .to_i32()
-                .map(|val| Value::Int32(val))
+                .map(Value::Int32)
                 .ok_or_else(|| out_of_range("Int32")),
             Some(Type::UInt64) => self
                 .to_u64()
-                .map(|val| Value::UInt64(val))
+                .map(Value::UInt64)
                 .ok_or_else(|| out_of_range("UInt64")),
             Some(Type::Int64) => self
                 .to_i64()
-                .map(|val| Value::Int64(val))
+                .map(Value::Int64)
                 .ok_or_else(|| out_of_range("Int64")),
             Some(Type::UInt128) => self
                 .to_u128()
-                .map(|val| Value::UInt128(val))
+                .map(Value::UInt128)
                 .ok_or_else(|| out_of_range("UInt128")),
             Some(Type::Int128) => self
                 .to_i128()
-                .map(|val| Value::Int128(val))
+                .map(Value::Int128)
                 .ok_or_else(|| out_of_range("Int128")),
             Some(Type::UInt256) => {
                 let val = self
@@ -129,7 +137,7 @@ impl ToSql for BigDecimal {
                     .ok_or_else(|| out_of_range("Int256"))?;
 
                 let val = pad_with_zeros(&val, 32).map_err(|_| out_of_range("Int256"))?;
-                Ok(Value::Int256(i256(val.into())))
+                Ok(Value::Int256(i256(val)))
             }
             Some(x) => Err(KlickhouseError::SerializeError(format!(
                 "unexpected type: {}",
@@ -148,4 +156,151 @@ fn pad_with_zeros(slice: &[u8], length: usize) -> Result<[u8; 32], &'static str>
     let start = length - slice.len();
     array[start..].copy_from_slice(slice);
     Ok(array)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    // use bigdecimal::{BigDecimal, FromPrimitive, ToPrimitive};
+    use std::str::FromStr;
+    use bigdecimal::num_bigint::ToBigInt;
+
+    #[test]
+    fn test_from_sql_integers() {
+        // For Int8
+        let typ = Type::Int8;
+        let result = BigDecimal::from_sql(&typ, Value::Int8(42)).unwrap();
+        let expected = BigDecimal::from(42);
+        assert_eq!(result, expected);
+
+        // For Int16
+        let typ = Type::Int16;
+        let result = BigDecimal::from_sql(&typ, Value::Int16(1234)).unwrap();
+        let expected = BigDecimal::from(1234);
+        assert_eq!(result, expected);
+
+        // For UInt8
+        let typ = Type::UInt8;
+        let result = BigDecimal::from_sql(&typ, Value::UInt8(200)).unwrap();
+        let expected = BigDecimal::from(200);
+        assert_eq!(result, expected);
+    }
+
+    // Test for from_sql with Decimal* types
+    #[test]
+    fn test_from_sql_decimals() {
+        // For Decimal32: the value 1234 with precision 2 means the number 12.34
+        let typ = Type::Decimal32(2);
+        let result = BigDecimal::from_sql(&typ, Value::Decimal32(2, 1234)).unwrap();
+        let expected = BigDecimal::from_str("12.34").unwrap();
+        assert_eq!(result, expected);
+
+        // For Decimal64: the value 123456 with precision 3 means 123.456
+        let typ = Type::Decimal64(3);
+        let result = BigDecimal::from_sql(&typ, Value::Decimal64(3, 123456)).unwrap();
+        let expected = BigDecimal::from_str("123.456").unwrap();
+        assert_eq!(result, expected);
+    }
+
+    // Test for to_sql without type_hint (None) – uses the branch for Decimal128
+    #[test]
+    fn test_to_sql_none_decimal128() {
+        let bd = BigDecimal::from(987654321);
+        let result = bd.to_sql(None).unwrap();
+        // Expect that the number without a fractional part will be converted to Decimal128 with scale = fractional_digit_count (0)
+        let expected = Value::Decimal128(0, 987654321);
+        assert_eq!(result, expected);
+    }
+
+    // Test for successful conversion to Decimal32
+    #[test]
+    fn test_to_sql_decimal32_success() {
+        let bd = BigDecimal::from(1234);
+        let type_hint = Type::Decimal32(2);
+        let result = bd.to_sql(Some(&type_hint)).unwrap();
+        let expected = Value::Decimal32(2, 1234);
+        assert_eq!(result, expected);
+    }
+
+    // Test for case when the number has a fractional part, but the precision for Decimal32 is insufficient
+    #[test]
+    fn test_to_sql_decimal32_out_of_range() {
+        // Here the number has 3 decimal places, and the precision is specified as 2 → error
+        let bd = BigDecimal::from_str("123.456").unwrap();
+        let err = bd.to_sql(Some(&Type::Decimal32(2)));
+        assert!(err.is_err());
+    }
+
+    // Test for successful conversion to UInt8
+    #[test]
+    fn test_to_sql_uint8_success() {
+        let bd = BigDecimal::from(255);
+        let result = bd.to_sql(Some(&Type::UInt8)).unwrap();
+        let expected = Value::UInt8(255);
+        assert_eq!(result, expected);
+    }
+
+    // Test for case when the value is out of range for Int8
+    #[test]
+    fn test_to_sql_int8_out_of_range() {
+        // For i8, the acceptable range is [-128, 127]. The number 200 does not fit → error.
+        let bd = BigDecimal::from(200);
+        let err = bd.to_sql(Some(&Type::Int8));
+        assert!(err.is_err());
+    }
+
+    // Test for checking the pad_with_zeros function (successful filling with zeros to the required length)
+    #[test]
+    fn test_pad_with_zeros_success() {
+        let slice = vec![1, 2, 3];
+        let padded = pad_with_zeros(&slice, 32).unwrap();
+        let mut expected = [0u8; 32];
+        expected[32 - slice.len()..].copy_from_slice(&slice);
+        assert_eq!(padded, expected);
+    }
+
+    // Test for pad_with_zeros – case when the length of the original slice is greater than the required
+    #[test]
+    fn test_pad_with_zeros_error() {
+        let slice = vec![0u8; 33];
+        let err = pad_with_zeros(&slice, 32);
+        assert!(err.is_err());
+    }
+
+    // Test for successful conversion to UInt256.
+    #[test]
+    fn test_to_sql_uint256_success() {
+        let bd = BigDecimal::from(123456789);
+        let result = bd.clone().to_sql(Some(&Type::UInt256)).unwrap();
+
+        // Get BigInt, convert to little-endian and fill with zeros to 32 bytes
+        let bigint = bd.to_bigint().unwrap();
+        let (_, bytes) = bigint.to_bytes_le();
+        let padded = pad_with_zeros(&bytes, 32).unwrap();
+        let expected = Value::UInt256(u256(padded));
+
+        assert_eq!(result, expected);
+    }
+
+    // Test for successful conversion to Int256 (with a negative number)
+    #[test]
+    fn test_to_sql_int256_success() {
+        let bd = BigDecimal::from(-98765);
+        let result = bd.clone().to_sql(Some(&Type::Int256)).unwrap();
+
+        let bigint = bd.to_bigint().unwrap();
+        let (_, bytes) = bigint.to_bytes_le();
+        let padded = pad_with_zeros(&bytes, 32).unwrap();
+        let expected = Value::Int256(i256(padded));
+
+        assert_eq!(result, expected);
+    }
+
+    // Test for to_sql with None and fractional number – should return an error
+    #[test]
+    fn test_to_sql_none_fractional_fail() {
+        let bd = BigDecimal::from_str("123.456").unwrap();
+        let err = bd.to_sql(None);
+        assert!(err.is_err());
+    }
 }
