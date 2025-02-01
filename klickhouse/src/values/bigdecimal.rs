@@ -162,8 +162,8 @@ fn pad_with_zeros(slice: &[u8], length: usize) -> Result<[u8; 32], &'static str>
 mod tests {
     use super::*;
     // use bigdecimal::{BigDecimal, FromPrimitive, ToPrimitive};
-    use std::str::FromStr;
     use bigdecimal::num_bigint::ToBigInt;
+    use std::str::FromStr;
 
     #[test]
     fn test_from_sql_integers() {
