@@ -1,5 +1,6 @@
 #![cfg(feature = "bigdecimal")]
 use bigdecimal::{BigDecimal, Num};
+use klickhouse::UnitValue;
 
 #[derive(klickhouse::Row, Debug, Default, PartialEq, Clone)]
 pub struct TestType {
@@ -12,7 +13,7 @@ pub struct TestType {
 }
 
 #[tokio::test]
-async fn test_client() {
+async fn test_bigdecimal() {
     let _ = env_logger::builder()
         .filter_level(log::LevelFilter::Info)
         .try_init();
@@ -64,4 +65,57 @@ async fn test_client() {
     assert_eq!(block.d_u64, block2.d_u64);
     assert_eq!(block.d_u128, block2.d_u128);
     assert_eq!(block.d_u256, block2.d_u256);
+
+    client
+        .insert_native_block(
+            "INSERT INTO test_bigdecimal (d_u8, d_u16, d_u32, d_u64, d_u128, d_u256) FORMAT Native",
+            vec![block.clone()],
+        )
+        .await
+        .unwrap();
+
+    let sum_u8 = client
+        .query_one::<UnitValue<BigDecimal>>("SELECT sum(d_u8) from test_bigdecimal")
+        .await
+        .unwrap();
+
+    assert_eq!(
+        sum_u8.0,
+        BigDecimal::from_str_radix("510", 10).expect("cant parse"),
+    );
+
+    let sum_u16 = client
+        .query_one::<UnitValue<BigDecimal>>("SELECT sum(d_u16) from test_bigdecimal")
+        .await
+        .unwrap();
+
+    assert_eq!(
+        sum_u16.0,
+        BigDecimal::from_str_radix("131070", 10).expect("cant parse"),
+    );
+
+    let sum_u32 = client
+        .query_one::<UnitValue<BigDecimal>>("SELECT sum(d_u32) from test_bigdecimal")
+        .await
+        .unwrap();
+
+    assert_eq!(
+        sum_u32.0,
+        BigDecimal::from_str_radix("8589934590", 10).expect("cant parse"),
+    );
+
+    let sum_u256 = client
+        .query_one::<UnitValue<BigDecimal>>("SELECT sum(d_u256) from test_bigdecimal")
+        .await
+        .unwrap();
+
+    assert_eq!(
+        sum_u256.0.to_string(),
+        BigDecimal::from_str_radix(
+            "115792089237316195423570985008687907853269984665640564039457584007913129639932",
+            10
+        )
+        .expect("cant parse")
+        .to_string(),
+    );
 }

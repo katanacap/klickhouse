@@ -9,12 +9,14 @@
       pkgs.curl
       pkgs.git
       pkgs.jq
+      pkgs.just
+
       pkgs.rustup
       pkgs.sccache
       pkgs.cargo-outdated
       pkgs.cargo-nextest
       pkgs.cargo-audit
-      pkgs.just
+      pkgs.rust-analyzer
   ] ++ lib.optionals pkgs.stdenv.isDarwin (with pkgs.darwin.apple_sdk; [
        frameworks.SystemConfiguration
        frameworks.Security

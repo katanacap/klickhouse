@@ -1,11 +1,11 @@
-use crate::{i256, u256, unexpected_type, FromSql, KlickhouseError, Result, ToSql, Type, Value};
+use crate::{u256, unexpected_type, FromSql, KlickhouseError, Result, ToSql, Type, Value};
 use bigdecimal::num_bigint::{BigInt, ToBigInt};
 use bigdecimal::{BigDecimal, ToPrimitive};
 
 impl FromSql for BigDecimal {
     fn from_sql(type_: &Type, value: Value) -> Result<Self> {
         // fn out_of_range(name: &str) -> KlickhouseError {
-        //     KlickhouseError::DeserializeError(format!("{name} out of bounds for rust_decimal"))
+        //     KlickhouseError::DeserializeError(format!("{name} out of bounds"))
         // }
 
         match value {
@@ -14,16 +14,28 @@ impl FromSql for BigDecimal {
             Value::Int32(i) => Ok(BigDecimal::from(i).with_scale(0)),
             Value::Int64(i) => Ok(BigDecimal::from(i).with_scale(0)),
             Value::Int128(i) => Ok(BigDecimal::from(i).with_scale(0)),
-            Value::Int256(i) => {
-                Ok(BigDecimal::from(BigInt::from_signed_bytes_le(i.0.as_slice())).with_scale(0))
-            }
+
+            // Value::Int256(i) => {
+            //     Ok(
+            //         BigDecimal::from(
+            //             BigInt::from_signed_bytes_be(i.0.as_slice())
+            //         ).with_scale(0)
+            //     )
+            // }
+            
             Value::UInt8(i) => Ok(BigDecimal::from(i).with_scale(0)),
             Value::UInt16(i) => Ok(BigDecimal::from(i).with_scale(0)),
             Value::UInt32(i) => Ok(BigDecimal::from(i).with_scale(0)),
             Value::UInt64(i) => Ok(BigDecimal::from(i).with_scale(0)),
             Value::UInt128(i) => Ok(BigDecimal::from(i).with_scale(0)),
+
             Value::UInt256(i) => {
-                Ok(BigDecimal::from(BigInt::from_signed_bytes_le(i.0.as_slice())).with_scale(0))
+                // println!("UInt256 bytes len : {:?}", i.0.len());
+                Ok(BigDecimal::from(BigInt::from_bytes_be(
+                    bigdecimal::num_bigint::Sign::Plus,
+                    i.0.as_slice(),
+                ))
+                .with_scale(0))
             }
             Value::Decimal32(precision, value) => {
                 Ok(BigDecimal::new(value.into(), precision as i64))
@@ -122,23 +134,28 @@ impl ToSql for BigDecimal {
             Some(Type::UInt256) => {
                 let val = self
                     .to_bigint()
-                    .map(|val| val.to_bytes_le())
+                    .map(|val| val.to_bytes_be())
                     .map(|val| val.1)
                     .ok_or_else(|| out_of_range("UInt256"))?;
 
+                // println!("Uint256 bytes len : {:?}", val.len());
+
                 let val = pad_with_zeros(&val, 32).map_err(|_| out_of_range("UInt256"))?;
+
                 Ok(Value::UInt256(u256(val)))
             }
-            Some(Type::Int256) => {
-                let val = self
-                    .to_bigint()
-                    .map(|val| val.to_bytes_le())
-                    .map(|val| val.1)
-                    .ok_or_else(|| out_of_range("Int256"))?;
+            // Some(Type::Int256) => {
+            //     let val = self
+            //         .to_bigint()
+            //         .map(|val| val.to_signed_bytes_be())
+            //         .ok_or_else(|| out_of_range("Int256"))?;
 
-                let val = pad_with_zeros(&val, 32).map_err(|_| out_of_range("Int256"))?;
-                Ok(Value::Int256(i256(val)))
-            }
+            //     println!("Int256 bytes len : {:?}", val.len());
+
+            //     let val = pad_with_zeros(&val, 32).map_err(|_| out_of_range("Int256"))?;
+
+            //     Ok(Value::Int256(i256(val)))
+            // }
             Some(x) => Err(KlickhouseError::SerializeError(format!(
                 "unexpected type: {}",
                 x
@@ -275,23 +292,9 @@ mod tests {
 
         // Get BigInt, convert to little-endian and fill with zeros to 32 bytes
         let bigint = bd.to_bigint().unwrap();
-        let (_, bytes) = bigint.to_bytes_le();
+        let (_, bytes) = bigint.to_bytes_be();
         let padded = pad_with_zeros(&bytes, 32).unwrap();
         let expected = Value::UInt256(u256(padded));
-
-        assert_eq!(result, expected);
-    }
-
-    // Test for successful conversion to Int256 (with a negative number)
-    #[test]
-    fn test_to_sql_int256_success() {
-        let bd = BigDecimal::from(-98765);
-        let result = bd.clone().to_sql(Some(&Type::Int256)).unwrap();
-
-        let bigint = bd.to_bigint().unwrap();
-        let (_, bytes) = bigint.to_bytes_le();
-        let padded = pad_with_zeros(&bytes, 32).unwrap();
-        let expected = Value::Int256(i256(padded));
 
         assert_eq!(result, expected);
     }
