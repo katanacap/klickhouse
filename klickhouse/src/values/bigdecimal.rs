@@ -22,7 +22,6 @@ impl FromSql for BigDecimal {
             //         ).with_scale(0)
             //     )
             // }
-            
             Value::UInt8(i) => Ok(BigDecimal::from(i).with_scale(0)),
             Value::UInt16(i) => Ok(BigDecimal::from(i).with_scale(0)),
             Value::UInt32(i) => Ok(BigDecimal::from(i).with_scale(0)),
