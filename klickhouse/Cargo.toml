@@ -39,7 +39,7 @@ name = "basic"
 tokio = { version = "1.43.0", features = ["io-util", "net", "rt", "macros"] }
 async-trait = "0.1.86"
 thiserror = "2.0.11"
-log = "0.4.25"
+log = "0.4.26"
 indexmap = { version = "2.7.1" }
 uuid = { version = "1.14.0", features = ["v4"] }
 chrono = { version = "0.4.39", default-features = false, features = ["std", "now"] }
