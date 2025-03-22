@@ -76,7 +76,7 @@ geo-types = { version = "0.7.15", optional = true }
 ###################################
 [dev-dependencies]
 tokio = { version = "1.44.1", features = ["rt-multi-thread"] }
-env_logger = "0.11.6"
+env_logger = "0.11.7"
 
 ###################################
 #  Security fixes
