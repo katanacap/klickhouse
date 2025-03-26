@@ -62,7 +62,7 @@ klickhouse_derive = { version = "=0.14.2", optional = true, path = "../klickhous
 # refinery-core version must be locked due to a transmute issue
 refinery-core = { version = "=0.8.16", optional = true } # must be locked due to transmute
 
-time = { version = "0.3.39", features = ["parsing", "formatting"], optional = true }
+time = { version = "0.3.41", features = ["parsing", "formatting"], optional = true }
 rust_decimal = { version = "1.37.1", optional = true }
 bigdecimal = { version = "0.4.7", optional = true }
 serde = { version = "1.0.219", features = ["derive"], optional = true }
