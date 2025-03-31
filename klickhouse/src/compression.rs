@@ -68,7 +68,7 @@ async fn read_compressed_blob(
     compression: CompressionMethod,
 ) -> Result<Vec<u8>> {
     let checksum =
-        (reader.read_u64_le().await? as u128) << 64u128 | (reader.read_u64_le().await? as u128);
+        ((reader.read_u64_le().await? as u128) << 64u128) | (reader.read_u64_le().await? as u128);
     let type_byte = reader.read_u8().await?;
     if type_byte != compression.byte() {
         return Err(KlickhouseError::ProtocolError(format!(

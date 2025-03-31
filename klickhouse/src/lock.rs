@@ -89,7 +89,7 @@ impl ClickhouseLock {
     }
 }
 
-impl<'a> ClickhouseLockHandle<'a> {
+impl ClickhouseLockHandle<'_> {
     /// Unlocks this handle (without spawning a tokio task)
     pub async fn unlock(mut self) -> Result<(), KlickhouseError> {
         self.lock.take().unwrap().reset().await
