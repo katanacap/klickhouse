@@ -26,8 +26,10 @@
   # https://devenv.sh/languages/
   languages.nix.enable = true;
 
-
   languages.rust.enable = true;
+  languages.rust.channel = "nightly";
+  languages.rust.components = [ "rustc" "cargo" "rust-src" "rust-std" ];
+
   env.RUSTC_WRAPPER = "${pkgs.sccache}/bin/sccache";
   # languages.rust.mold.enable = true;
 
