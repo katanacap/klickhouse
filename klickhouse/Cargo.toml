@@ -36,7 +36,7 @@ name = "basic"
 ###################################
 [dependencies]
 # -- Main dependencies --
-tokio = { version = "1.44.1", features = ["io-util", "net", "rt", "macros"] }
+tokio = { version = "1.44.2", features = ["io-util", "net", "rt", "macros"] }
 async-trait = "0.1.88"
 thiserror = "2.0.12"
 log = "0.4.27"
@@ -75,7 +75,7 @@ geo-types = { version = "0.7.16", optional = true }
 #  Dev Dependencies
 ###################################
 [dev-dependencies]
-tokio = { version = "1.44.1", features = ["rt-multi-thread"] }
+tokio = { version = "1.44.2", features = ["rt-multi-thread"] }
 env_logger = "0.11.8"
 
 ###################################
