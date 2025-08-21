@@ -38,7 +38,7 @@ name = "basic"
 # -- Main dependencies --
 tokio = { version = "1.47.1", features = ["io-util", "net", "rt", "macros"] }
 async-trait = "0.1.89"
-thiserror = "2.0.15"
+thiserror = "2.0.16"
 log = "0.4.27"
 indexmap = { version = "2.10.0" }
 uuid = { version = "1.18.0", features = ["v4"] }
