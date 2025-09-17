@@ -63,7 +63,7 @@ klickhouse_derive = { version = "=0.14.2", optional = true, path = "../klickhous
 refinery-core = { version = "=0.8.16", optional = true } # must be locked due to transmute
 
 time = { version = "0.3.43", features = ["parsing", "formatting"], optional = true }
-rust_decimal = { version = "1.37.2", optional = true }
+rust_decimal = { version = "1.38.0", optional = true }
 bigdecimal = { version = "0.4.8", optional = true }
 serde = { version = "1.0.225", features = ["derive"], optional = true }
 serde_json = { version = "1.0.143", optional = true }
