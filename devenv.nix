@@ -17,11 +17,7 @@
       pkgs.cargo-nextest
       pkgs.cargo-audit
       pkgs.rust-analyzer
-  ] ++ lib.optionals pkgs.stdenv.isDarwin (with pkgs.darwin.apple_sdk; [
-       frameworks.SystemConfiguration
-       frameworks.Security
-       frameworks.CoreFoundation
-     ]);
+  ];
 
   # https://devenv.sh/languages/
   languages.nix.enable = true;
@@ -50,15 +46,15 @@
 
   env.KLICKHOUSE_TEST_ADDR = "127.0.0.1:9111";
 
-  # https://devenv.sh/scripts/
-  scripts.hello.exec = ''
-    echo hello from $GREET
-  '';
+  # # https://devenv.sh/scripts/
+  # scripts.hello.exec = ''
+  #   echo hello from $GREET
+  # '';
 
-  enterShell = ''
-    hello
-    git --version
-  '';
+  # enterShell = ''
+  #   hello
+  #   git --version
+  # '';
 
   # https://devenv.sh/tasks/
   # tasks = {
