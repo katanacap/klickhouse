@@ -48,7 +48,7 @@ impl Deserializer for PointDeserializer {
 }
 macro_rules! array_deser {
     ($name:ident, $item:ty) => {
-        paste::paste! {
+        pastey::paste! {
             pub struct [<$name Deserializer>];
             impl super::array::ArrayDeserializerGeneric for [<$name Deserializer>] {
                 type Item = crate::values::$item;

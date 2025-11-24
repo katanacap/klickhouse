@@ -26,7 +26,7 @@
   languages.rust.channel = "nightly";
   languages.rust.components = [ "rustc" "cargo" "rust-src" "rust-std" ];
 
-  env.RUSTC_WRAPPER = "${pkgs.sccache}/bin/sccache";
+  env.RUSTC_WRAPPER = "";
   # languages.rust.mold.enable = true;
 
   # https://devenv.sh/processes/

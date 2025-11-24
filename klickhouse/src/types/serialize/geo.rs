@@ -45,7 +45,7 @@ impl Serializer for PointSerializer {
 
 macro_rules! array_ser {
     ($name:ident, $item:ty) => {
-        paste::paste! {
+        pastey::paste! {
             pub struct [<$name Serializer>];
             impl super::array::ArraySerializerGeneric for [<$name Serializer>] {
                 fn inner_type(_type_: &Type) -> &Type {
