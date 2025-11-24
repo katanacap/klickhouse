@@ -30,7 +30,7 @@ jobs:
         include:
           - { rust: stable, os: ubuntu-24.04, jobname: "stable" }
           - { rust: nightly, os: ubuntu-24.04, jobname: "nightly" }
-          - { rust: "1.82.0", os: ubuntu-24.04, jobname: "min_compat" }
+          - { rust: "1.83.0", os: ubuntu-24.04, jobname: "min_compat" }
     services:
       clickhouse:
         image: clickhouse/clickhouse-server:24.8.12.28
