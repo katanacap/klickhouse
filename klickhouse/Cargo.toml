@@ -69,7 +69,7 @@ serde = { version = "1.0.228", features = ["derive"], optional = true }
 serde_json = { version = "1.0.145", optional = true }
 tokio-rustls = { version = "0.26.4", optional = true }
 rustls-pki-types = { version = "1.13.1", optional = true }
-geo-types = { version = "0.7.17", optional = true }
+geo-types = { version = "0.7.18", optional = true }
 
 ###################################
 #  Dev Dependencies
