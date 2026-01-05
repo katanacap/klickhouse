@@ -45,7 +45,7 @@ uuid = { version = "1.19.0", features = ["v4"] }
 chrono = { version = "0.4.42", default-features = false, features = ["std", "now"] }
 chrono-tz = "0.10.4"
 futures-util = { version = "0.3.31", default-features = false, features = ["std"] }
-tokio-stream = "0.1.17"
+tokio-stream = "0.1.18"
 cityhash-rs = "1.0.1"
 compiler-tools = "0.2.0"
 compiler-tools-derive = "0.2.0"
