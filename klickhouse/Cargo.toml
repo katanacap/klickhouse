@@ -66,7 +66,7 @@ time = { version = "0.3.44", features = ["parsing", "formatting"], optional = tr
 rust_decimal = { version = "1.39.0", optional = true }
 bigdecimal = { version = "0.4.10", optional = true }
 serde = { version = "1.0.228", features = ["derive"], optional = true }
-serde_json = { version = "1.0.148", optional = true }
+serde_json = { version = "1.0.149", optional = true }
 tokio-rustls = { version = "0.26.4", optional = true }
 rustls-pki-types = { version = "1.13.2", optional = true }
 geo-types = { version = "0.7.18", optional = true }
