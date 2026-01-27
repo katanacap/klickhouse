@@ -41,7 +41,7 @@ async-trait = "0.1.89"
 thiserror = "2.0.18"
 log = "0.4.29"
 indexmap = { version = "2.13.0" }
-uuid = { version = "1.19.0", features = ["v4"] }
+uuid = { version = "1.20.0", features = ["v4"] }
 chrono = { version = "0.4.43", default-features = false, features = ["std", "now"] }
 chrono-tz = "0.10.4"
 futures-util = { version = "0.3.31", default-features = false, features = ["std"] }
