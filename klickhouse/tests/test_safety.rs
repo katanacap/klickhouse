@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use klickhouse::{Client, ClientOptions, ClickhouseEnum, Row};
+use klickhouse::{ClickhouseEnum, Client, ClientOptions, Row};
 
 /// Helper to get a client with custom options
 async fn get_client_with_options(opts: ClientOptions) -> Client {
@@ -484,10 +484,7 @@ async fn test_enum8_string_roundtrip() {
     ];
 
     client
-        .insert_native_block(
-            "INSERT INTO test_safety_enum8 FORMAT native",
-            rows.clone(),
-        )
+        .insert_native_block("INSERT INTO test_safety_enum8 FORMAT native", rows.clone())
         .await
         .unwrap();
 
@@ -550,10 +547,7 @@ async fn test_enum16_string_roundtrip() {
     ];
 
     client
-        .insert_native_block(
-            "INSERT INTO test_safety_enum16 FORMAT native",
-            rows.clone(),
-        )
+        .insert_native_block("INSERT INTO test_safety_enum16 FORMAT native", rows.clone())
         .await
         .unwrap();
 
@@ -588,9 +582,7 @@ async fn test_enum8_raw_i8() {
         .await
         .unwrap();
     client
-        .execute(
-            "CREATE TABLE test_safety_enum8_i8 (val Enum8('a' = 1, 'b' = 2)) ENGINE = Memory",
-        )
+        .execute("CREATE TABLE test_safety_enum8_i8 (val Enum8('a' = 1, 'b' = 2)) ENGINE = Memory")
         .await
         .unwrap();
 
@@ -765,10 +757,18 @@ async fn test_derive_enum_rename_all_snake_case() {
     }
 
     let rows = vec![
-        StatusRow { status: OrderStatus::NewOrder },
-        StatusRow { status: OrderStatus::InProgress },
-        StatusRow { status: OrderStatus::Completed },
-        StatusRow { status: OrderStatus::Cancelled },
+        StatusRow {
+            status: OrderStatus::NewOrder,
+        },
+        StatusRow {
+            status: OrderStatus::InProgress,
+        },
+        StatusRow {
+            status: OrderStatus::Completed,
+        },
+        StatusRow {
+            status: OrderStatus::Cancelled,
+        },
     ];
 
     client
@@ -826,10 +826,18 @@ async fn test_derive_enum_enum16_screaming_snake() {
     }
 
     let rows = vec![
-        PriorityRow { prio: Priority::Critical },
-        PriorityRow { prio: Priority::Low },
-        PriorityRow { prio: Priority::High },
-        PriorityRow { prio: Priority::Medium },
+        PriorityRow {
+            prio: Priority::Critical,
+        },
+        PriorityRow {
+            prio: Priority::Low,
+        },
+        PriorityRow {
+            prio: Priority::High,
+        },
+        PriorityRow {
+            prio: Priority::Medium,
+        },
     ];
 
     client

@@ -1,6 +1,6 @@
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{DeriveInput, Data, Fields, Meta, Expr, Lit};
+use syn::{Data, DeriveInput, Expr, Fields, Lit, Meta};
 
 use crate::case::RenameRule;
 use crate::symbol::{KLICKHOUSE, RENAME, RENAME_ALL};
@@ -32,8 +32,7 @@ pub fn expand(input: &DeriveInput) -> Result<TokenStream, Vec<syn::Error>> {
 
     // Build variant name mappings
     let enum_name = &input.ident;
-    let (enum_impl_generics, enum_ty_generics, enum_where_clause) =
-        input.generics.split_for_impl();
+    let (enum_impl_generics, enum_ty_generics, enum_where_clause) = input.generics.split_for_impl();
 
     let mut variant_idents = Vec::new();
     let mut clickhouse_names = Vec::new();
@@ -110,9 +109,9 @@ fn parse_rename_all(attrs: &[syn::Attribute]) -> Result<RenameRule, Vec<syn::Err
         if !attr.path().is_ident(&KLICKHOUSE.to_string()) {
             continue;
         }
-        let nested = match attr.parse_args_with(
-            syn::punctuated::Punctuated::<Meta, syn::Token![,]>::parse_terminated,
-        ) {
+        let nested = match attr
+            .parse_args_with(syn::punctuated::Punctuated::<Meta, syn::Token![,]>::parse_terminated)
+        {
             Ok(n) => n,
             Err(e) => return Err(vec![e]),
         };
@@ -143,9 +142,9 @@ fn parse_variant_rename(attrs: &[syn::Attribute]) -> Result<Option<String>, Vec<
         if !attr.path().is_ident(&KLICKHOUSE.to_string()) {
             continue;
         }
-        let nested = match attr.parse_args_with(
-            syn::punctuated::Punctuated::<Meta, syn::Token![,]>::parse_terminated,
-        ) {
+        let nested = match attr
+            .parse_args_with(syn::punctuated::Punctuated::<Meta, syn::Token![,]>::parse_terminated)
+        {
             Ok(n) => n,
             Err(e) => return Err(vec![e]),
         };
