@@ -85,14 +85,44 @@ impl ToSql for f64 {
     }
 }
 
+fn string_to_enum(name: &str, type_hint: Option<&Type>) -> Option<Result<Value>> {
+    match type_hint {
+        Some(Type::Enum8(entries)) => {
+            let found = entries.iter().find(|(n, _)| n == name);
+            Some(match found {
+                Some((_, idx)) => Ok(Value::Enum8(*idx)),
+                None => Err(KlickhouseError::SerializeError(format!(
+                    "enum8 name '{name}' not found in type definition"
+                ))),
+            })
+        }
+        Some(Type::Enum16(entries)) => {
+            let found = entries.iter().find(|(n, _)| n == name);
+            Some(match found {
+                Some((_, idx)) => Ok(Value::Enum16(*idx)),
+                None => Err(KlickhouseError::SerializeError(format!(
+                    "enum16 name '{name}' not found in type definition"
+                ))),
+            })
+        }
+        _ => None,
+    }
+}
+
 impl ToSql for String {
-    fn to_sql(self, _type_hint: Option<&Type>) -> Result<Value> {
+    fn to_sql(self, type_hint: Option<&Type>) -> Result<Value> {
+        if let Some(result) = string_to_enum(&self, type_hint) {
+            return result;
+        }
         Ok(Value::String(self.into_bytes()))
     }
 }
 
 impl ToSql for &str {
-    fn to_sql(self, _type_hint: Option<&Type>) -> Result<Value> {
+    fn to_sql(self, type_hint: Option<&Type>) -> Result<Value> {
+        if let Some(result) = string_to_enum(self, type_hint) {
+            return result;
+        }
         Ok(Value::String(self.as_bytes().to_vec()))
     }
 }

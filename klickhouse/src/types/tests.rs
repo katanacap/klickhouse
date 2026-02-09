@@ -405,7 +405,146 @@ async fn roundtrip_datetime64() {
     );
 }
 
-//enum8, enum16, nested skipped
+// Enum8 and Enum16 wire-format roundtrip tests
+
+#[tokio::test]
+async fn roundtrip_enum8() {
+    let type_ = Type::Enum8(vec![
+        ("hello".to_string(), 1),
+        ("world".to_string(), 2),
+        ("foo".to_string(), -1),
+    ]);
+    let values = &[Value::Enum8(1), Value::Enum8(2), Value::Enum8(-1)];
+    assert_eq!(
+        &values[..],
+        roundtrip_values(&type_, &values[..]).await.unwrap()
+    );
+}
+
+#[tokio::test]
+async fn roundtrip_enum16() {
+    let type_ = Type::Enum16(vec![
+        ("alpha".to_string(), 100),
+        ("beta".to_string(), 200),
+        ("gamma".to_string(), -300),
+    ]);
+    let values = &[Value::Enum16(100), Value::Enum16(200), Value::Enum16(-300)];
+    assert_eq!(
+        &values[..],
+        roundtrip_values(&type_, &values[..]).await.unwrap()
+    );
+}
+
+// Enum type parsing tests
+
+#[test]
+fn parse_enum8_basic() {
+    let t: Type = "Enum8('hello' = 1, 'world' = 2)".parse().unwrap();
+    match &t {
+        Type::Enum8(entries) => {
+            assert_eq!(entries.len(), 2);
+            assert_eq!(entries[0], ("hello".to_string(), 1));
+            assert_eq!(entries[1], ("world".to_string(), 2));
+        }
+        other => panic!("expected Enum8, got {other:?}"),
+    }
+}
+
+#[test]
+fn parse_enum16_basic() {
+    let t: Type = "Enum16('foo' = 100, 'bar' = 200)".parse().unwrap();
+    match &t {
+        Type::Enum16(entries) => {
+            assert_eq!(entries.len(), 2);
+            assert_eq!(entries[0], ("foo".to_string(), 100));
+            assert_eq!(entries[1], ("bar".to_string(), 200));
+        }
+        other => panic!("expected Enum16, got {other:?}"),
+    }
+}
+
+#[test]
+fn parse_enum8_negative_values() {
+    let t: Type = "Enum8('a' = -128, 'b' = 127)".parse().unwrap();
+    match &t {
+        Type::Enum8(entries) => {
+            assert_eq!(entries[0], ("a".to_string(), -128));
+            assert_eq!(entries[1], ("b".to_string(), 127));
+        }
+        other => panic!("expected Enum8, got {other:?}"),
+    }
+}
+
+#[test]
+fn parse_enum8_escaped_quote() {
+    let t: Type = "Enum8('it\\'s' = 1, 'normal' = 2)".parse().unwrap();
+    match &t {
+        Type::Enum8(entries) => {
+            assert_eq!(entries[0].0, "it's");
+            assert_eq!(entries[0].1, 1);
+            assert_eq!(entries[1].0, "normal");
+        }
+        other => panic!("expected Enum8, got {other:?}"),
+    }
+}
+
+#[test]
+fn parse_enum8_value_out_of_range() {
+    let result: std::result::Result<Type, _> = "Enum8('a' = 200)".parse();
+    assert!(result.is_err());
+}
+
+#[test]
+fn parse_enum16_value_out_of_range() {
+    let result: std::result::Result<Type, _> = "Enum16('a' = 100000)".parse();
+    assert!(result.is_err());
+}
+
+#[test]
+fn parse_enum_roundtrip_display() {
+    let original = "Enum8('hello' = 1, 'world' = 2)";
+    let t: Type = original.parse().unwrap();
+    let displayed = t.to_string();
+    let reparsed: Type = displayed.parse().unwrap();
+    assert_eq!(t, reparsed);
+}
+
+#[test]
+fn parse_enum16_roundtrip_display() {
+    let original = "Enum16('alpha' = 1000, 'beta' = 2000)";
+    let t: Type = original.parse().unwrap();
+    let displayed = t.to_string();
+    let reparsed: Type = displayed.parse().unwrap();
+    assert_eq!(t, reparsed);
+}
+
+#[test]
+fn enum8_validate_value_valid() {
+    let t = Type::Enum8(vec![("a".to_string(), 1), ("b".to_string(), 2)]);
+    assert!(t.validate_value(&Value::Enum8(1)).is_ok());
+    assert!(t.validate_value(&Value::Enum8(2)).is_ok());
+}
+
+#[test]
+fn enum8_validate_value_invalid() {
+    let t = Type::Enum8(vec![("a".to_string(), 1), ("b".to_string(), 2)]);
+    assert!(t.validate_value(&Value::Enum8(3)).is_err());
+}
+
+#[test]
+fn enum_with_comma_in_name() {
+    // ClickHouse allows commas in enum names since they're quoted
+    let t: Type = "Enum8('hello, world' = 1, 'foo' = 2)".parse().unwrap();
+    match &t {
+        Type::Enum8(entries) => {
+            assert_eq!(entries[0].0, "hello, world");
+            assert_eq!(entries[1].0, "foo");
+        }
+        other => panic!("expected Enum8, got {other:?}"),
+    }
+}
+
+// nested skipped
 
 #[tokio::test]
 async fn roundtrip_array() {

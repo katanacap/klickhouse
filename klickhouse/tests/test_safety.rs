@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use klickhouse::{Client, ClientOptions, Row};
+use klickhouse::{Client, ClientOptions, ClickhouseEnum, Row};
 
 /// Helper to get a client with custom options
 async fn get_client_with_options(opts: ClientOptions) -> Client {
@@ -437,6 +437,464 @@ async fn test_large_batch_insert() {
     // Cleanup
     client
         .execute("DROP TABLE IF EXISTS test_safety_large_batch")
+        .await
+        .unwrap();
+}
+
+// ============================================================
+// Test: Enum8 insert and read as String
+// ============================================================
+#[tokio::test]
+async fn test_enum8_string_roundtrip() {
+    let _ = env_logger::builder()
+        .filter_level(log::LevelFilter::Info)
+        .try_init();
+    let client = super::get_client().await;
+
+    client
+        .execute("DROP TABLE IF EXISTS test_safety_enum8")
+        .await
+        .unwrap();
+    client
+        .execute(
+            "CREATE TABLE test_safety_enum8 (id UInt32, status Enum8('active' = 1, 'inactive' = 2, 'deleted' = -1)) ENGINE = Memory",
+        )
+        .await
+        .unwrap();
+
+    #[derive(Row, Debug, PartialEq, Clone)]
+    struct Enum8Row {
+        id: u32,
+        status: String,
+    }
+
+    let rows = vec![
+        Enum8Row {
+            id: 1,
+            status: "active".into(),
+        },
+        Enum8Row {
+            id: 2,
+            status: "inactive".into(),
+        },
+        Enum8Row {
+            id: 3,
+            status: "deleted".into(),
+        },
+    ];
+
+    client
+        .insert_native_block(
+            "INSERT INTO test_safety_enum8 FORMAT native",
+            rows.clone(),
+        )
+        .await
+        .unwrap();
+
+    let result: Vec<Enum8Row> = client
+        .query_collect("SELECT * FROM test_safety_enum8 ORDER BY id")
+        .await
+        .unwrap();
+    assert_eq!(result.len(), 3);
+    assert_eq!(result[0].status, "active");
+    assert_eq!(result[1].status, "inactive");
+    assert_eq!(result[2].status, "deleted");
+
+    // Cleanup
+    client
+        .execute("DROP TABLE IF EXISTS test_safety_enum8")
+        .await
+        .unwrap();
+}
+
+// ============================================================
+// Test: Enum16 insert and read as String
+// ============================================================
+#[tokio::test]
+async fn test_enum16_string_roundtrip() {
+    let _ = env_logger::builder()
+        .filter_level(log::LevelFilter::Info)
+        .try_init();
+    let client = super::get_client().await;
+
+    client
+        .execute("DROP TABLE IF EXISTS test_safety_enum16")
+        .await
+        .unwrap();
+    client
+        .execute(
+            "CREATE TABLE test_safety_enum16 (id UInt32, color Enum16('red' = 100, 'green' = 200, 'blue' = 300)) ENGINE = Memory",
+        )
+        .await
+        .unwrap();
+
+    #[derive(Row, Debug, PartialEq, Clone)]
+    struct Enum16Row {
+        id: u32,
+        color: String,
+    }
+
+    let rows = vec![
+        Enum16Row {
+            id: 1,
+            color: "red".into(),
+        },
+        Enum16Row {
+            id: 2,
+            color: "green".into(),
+        },
+        Enum16Row {
+            id: 3,
+            color: "blue".into(),
+        },
+    ];
+
+    client
+        .insert_native_block(
+            "INSERT INTO test_safety_enum16 FORMAT native",
+            rows.clone(),
+        )
+        .await
+        .unwrap();
+
+    let result: Vec<Enum16Row> = client
+        .query_collect("SELECT * FROM test_safety_enum16 ORDER BY id")
+        .await
+        .unwrap();
+    assert_eq!(result.len(), 3);
+    assert_eq!(result[0].color, "red");
+    assert_eq!(result[1].color, "green");
+    assert_eq!(result[2].color, "blue");
+
+    // Cleanup
+    client
+        .execute("DROP TABLE IF EXISTS test_safety_enum16")
+        .await
+        .unwrap();
+}
+
+// ============================================================
+// Test: Enum8 read as i8 (raw numeric)
+// ============================================================
+#[tokio::test]
+async fn test_enum8_raw_i8() {
+    let _ = env_logger::builder()
+        .filter_level(log::LevelFilter::Info)
+        .try_init();
+    let client = super::get_client().await;
+
+    client
+        .execute("DROP TABLE IF EXISTS test_safety_enum8_i8")
+        .await
+        .unwrap();
+    client
+        .execute(
+            "CREATE TABLE test_safety_enum8_i8 (val Enum8('a' = 1, 'b' = 2)) ENGINE = Memory",
+        )
+        .await
+        .unwrap();
+
+    // Insert via SQL directly
+    client
+        .execute("INSERT INTO test_safety_enum8_i8 VALUES ('a'), ('b'), ('a')")
+        .await
+        .unwrap();
+
+    #[derive(Row, Debug)]
+    struct RawEnum8Row {
+        val: i8,
+    }
+
+    let result: Vec<RawEnum8Row> = client
+        .query_collect("SELECT * FROM test_safety_enum8_i8")
+        .await
+        .unwrap();
+    assert_eq!(result.len(), 3);
+    assert_eq!(result[0].val, 1);
+    assert_eq!(result[1].val, 2);
+    assert_eq!(result[2].val, 1);
+
+    // Cleanup
+    client
+        .execute("DROP TABLE IF EXISTS test_safety_enum8_i8")
+        .await
+        .unwrap();
+}
+
+// ============================================================
+// Test: Enum8 with all variants via SELECT
+// ============================================================
+#[tokio::test]
+async fn test_enum8_select_all_variants() {
+    let _ = env_logger::builder()
+        .filter_level(log::LevelFilter::Info)
+        .try_init();
+    let client = super::get_client().await;
+
+    client
+        .execute("DROP TABLE IF EXISTS test_safety_enum8_all")
+        .await
+        .unwrap();
+    client
+        .execute(
+            "CREATE TABLE test_safety_enum8_all (val Enum8('x' = 0, 'y' = 1, 'z' = 2)) ENGINE = Memory",
+        )
+        .await
+        .unwrap();
+
+    client
+        .execute("INSERT INTO test_safety_enum8_all VALUES ('x'), ('y'), ('z')")
+        .await
+        .unwrap();
+
+    #[derive(Row, Debug)]
+    struct EnumVal {
+        val: String,
+    }
+
+    let result: Vec<EnumVal> = client
+        .query_collect("SELECT * FROM test_safety_enum8_all ORDER BY val")
+        .await
+        .unwrap();
+    assert_eq!(result.len(), 3);
+    assert_eq!(result[0].val, "x");
+    assert_eq!(result[1].val, "y");
+    assert_eq!(result[2].val, "z");
+
+    // Cleanup
+    client
+        .execute("DROP TABLE IF EXISTS test_safety_enum8_all")
+        .await
+        .unwrap();
+}
+
+// ============================================================
+// Tests for #[derive(ClickhouseEnum)] -- Rust enum mapping
+// ============================================================
+
+#[derive(ClickhouseEnum, Debug, PartialEq, Clone)]
+enum Color {
+    Red,
+    Green,
+    Blue,
+}
+
+#[tokio::test]
+async fn test_derive_enum_basic_roundtrip() {
+    let _ = env_logger::builder()
+        .filter_level(log::LevelFilter::Info)
+        .try_init();
+    let client = super::get_client().await;
+
+    client
+        .execute("DROP TABLE IF EXISTS test_derive_enum_basic")
+        .await
+        .unwrap();
+    client
+        .execute(
+            "CREATE TABLE test_derive_enum_basic (val Enum8('Red' = 1, 'Green' = 2, 'Blue' = 3)) ENGINE = Memory",
+        )
+        .await
+        .unwrap();
+
+    #[derive(Row, Debug)]
+    struct ColorRow {
+        val: Color,
+    }
+
+    let rows = vec![
+        ColorRow { val: Color::Red },
+        ColorRow { val: Color::Green },
+        ColorRow { val: Color::Blue },
+        ColorRow { val: Color::Red },
+    ];
+
+    client
+        .insert_native_block("INSERT INTO test_derive_enum_basic FORMAT Native", rows)
+        .await
+        .unwrap();
+
+    let result: Vec<ColorRow> = client
+        .query_collect("SELECT * FROM test_derive_enum_basic")
+        .await
+        .unwrap();
+    assert_eq!(result.len(), 4);
+    assert_eq!(result[0].val, Color::Red);
+    assert_eq!(result[1].val, Color::Green);
+    assert_eq!(result[2].val, Color::Blue);
+    assert_eq!(result[3].val, Color::Red);
+
+    // Cleanup
+    client
+        .execute("DROP TABLE IF EXISTS test_derive_enum_basic")
+        .await
+        .unwrap();
+}
+
+#[derive(ClickhouseEnum, Debug, PartialEq, Clone)]
+#[klickhouse(rename_all = "snake_case")]
+enum OrderStatus {
+    NewOrder,
+    InProgress,
+    #[klickhouse(rename = "done")]
+    Completed,
+    Cancelled,
+}
+
+#[tokio::test]
+async fn test_derive_enum_rename_all_snake_case() {
+    let _ = env_logger::builder()
+        .filter_level(log::LevelFilter::Info)
+        .try_init();
+    let client = super::get_client().await;
+
+    client
+        .execute("DROP TABLE IF EXISTS test_derive_enum_rename")
+        .await
+        .unwrap();
+    client
+        .execute(
+            "CREATE TABLE test_derive_enum_rename (status Enum8('new_order' = 1, 'in_progress' = 2, 'done' = 3, 'cancelled' = 4)) ENGINE = Memory",
+        )
+        .await
+        .unwrap();
+
+    #[derive(Row, Debug)]
+    struct StatusRow {
+        status: OrderStatus,
+    }
+
+    let rows = vec![
+        StatusRow { status: OrderStatus::NewOrder },
+        StatusRow { status: OrderStatus::InProgress },
+        StatusRow { status: OrderStatus::Completed },
+        StatusRow { status: OrderStatus::Cancelled },
+    ];
+
+    client
+        .insert_native_block("INSERT INTO test_derive_enum_rename FORMAT Native", rows)
+        .await
+        .unwrap();
+
+    let result: Vec<StatusRow> = client
+        .query_collect("SELECT * FROM test_derive_enum_rename")
+        .await
+        .unwrap();
+    assert_eq!(result.len(), 4);
+    assert_eq!(result[0].status, OrderStatus::NewOrder);
+    assert_eq!(result[1].status, OrderStatus::InProgress);
+    assert_eq!(result[2].status, OrderStatus::Completed);
+    assert_eq!(result[3].status, OrderStatus::Cancelled);
+
+    // Cleanup
+    client
+        .execute("DROP TABLE IF EXISTS test_derive_enum_rename")
+        .await
+        .unwrap();
+}
+
+#[derive(ClickhouseEnum, Debug, PartialEq, Clone)]
+#[klickhouse(rename_all = "SCREAMING_SNAKE_CASE")]
+enum Priority {
+    Low,
+    Medium,
+    High,
+    Critical,
+}
+
+#[tokio::test]
+async fn test_derive_enum_enum16_screaming_snake() {
+    let _ = env_logger::builder()
+        .filter_level(log::LevelFilter::Info)
+        .try_init();
+    let client = super::get_client().await;
+
+    client
+        .execute("DROP TABLE IF EXISTS test_derive_enum16")
+        .await
+        .unwrap();
+    client
+        .execute(
+            "CREATE TABLE test_derive_enum16 (prio Enum16('LOW' = 1, 'MEDIUM' = 2, 'HIGH' = 3, 'CRITICAL' = 4)) ENGINE = Memory",
+        )
+        .await
+        .unwrap();
+
+    #[derive(Row, Debug)]
+    struct PriorityRow {
+        prio: Priority,
+    }
+
+    let rows = vec![
+        PriorityRow { prio: Priority::Critical },
+        PriorityRow { prio: Priority::Low },
+        PriorityRow { prio: Priority::High },
+        PriorityRow { prio: Priority::Medium },
+    ];
+
+    client
+        .insert_native_block("INSERT INTO test_derive_enum16 FORMAT Native", rows)
+        .await
+        .unwrap();
+
+    let result: Vec<PriorityRow> = client
+        .query_collect("SELECT * FROM test_derive_enum16")
+        .await
+        .unwrap();
+    assert_eq!(result.len(), 4);
+    assert_eq!(result[0].prio, Priority::Critical);
+    assert_eq!(result[1].prio, Priority::Low);
+    assert_eq!(result[2].prio, Priority::High);
+    assert_eq!(result[3].prio, Priority::Medium);
+
+    // Cleanup
+    client
+        .execute("DROP TABLE IF EXISTS test_derive_enum16")
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
+async fn test_derive_enum_read_sql_inserted_data() {
+    let _ = env_logger::builder()
+        .filter_level(log::LevelFilter::Info)
+        .try_init();
+    let client = super::get_client().await;
+
+    client
+        .execute("DROP TABLE IF EXISTS test_derive_enum_sql")
+        .await
+        .unwrap();
+    client
+        .execute(
+            "CREATE TABLE test_derive_enum_sql (val Enum8('Red' = 1, 'Green' = 2, 'Blue' = 3)) ENGINE = Memory",
+        )
+        .await
+        .unwrap();
+
+    // Insert via raw SQL strings
+    client
+        .execute("INSERT INTO test_derive_enum_sql VALUES ('Green'), ('Blue'), ('Red')")
+        .await
+        .unwrap();
+
+    #[derive(Row, Debug)]
+    struct ColorRow {
+        val: Color,
+    }
+
+    let result: Vec<ColorRow> = client
+        .query_collect("SELECT * FROM test_derive_enum_sql")
+        .await
+        .unwrap();
+    assert_eq!(result.len(), 3);
+    assert_eq!(result[0].val, Color::Green);
+    assert_eq!(result[1].val, Color::Blue);
+    assert_eq!(result[2].val, Color::Red);
+
+    // Cleanup
+    client
+        .execute("DROP TABLE IF EXISTS test_derive_enum_sql")
         .await
         .unwrap();
 }

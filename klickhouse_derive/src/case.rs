@@ -87,6 +87,49 @@ impl RenameRule {
             ScreamingKebabCase => ScreamingSnakeCase.apply_to_field(field).replace('_', "-"),
         }
     }
+
+    /// Apply a renaming rule to an enum variant (PascalCase input),
+    /// returning the version expected in the source.
+    pub fn apply_to_variant(&self, variant: &str) -> String {
+        match *self {
+            None | PascalCase => variant.to_owned(),
+            LowerCase => variant.to_ascii_lowercase(),
+            UpperCase => variant.to_ascii_uppercase(),
+            SnakeCase | ScreamingSnakeCase => {
+                let mut snake = String::new();
+                for (i, ch) in variant.chars().enumerate() {
+                    if ch.is_ascii_uppercase() && i > 0 {
+                        snake.push('_');
+                    }
+                    if *self == ScreamingSnakeCase {
+                        snake.push(ch.to_ascii_uppercase());
+                    } else {
+                        snake.push(ch.to_ascii_lowercase());
+                    }
+                }
+                snake
+            }
+            CamelCase => {
+                let mut result = String::new();
+                for (i, ch) in variant.chars().enumerate() {
+                    if i == 0 {
+                        result.push(ch.to_ascii_lowercase());
+                    } else {
+                        result.push(ch);
+                    }
+                }
+                result
+            }
+            KebabCase => {
+                let snake = SnakeCase.apply_to_variant(variant);
+                snake.replace('_', "-")
+            }
+            ScreamingKebabCase => {
+                let snake = ScreamingSnakeCase.apply_to_variant(variant);
+                snake.replace('_', "-")
+            }
+        }
+    }
 }
 
 pub struct ParseError<'a> {

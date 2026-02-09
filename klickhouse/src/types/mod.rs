@@ -215,10 +215,20 @@ fn parse_args(input: &str) -> Result<Vec<&str>> {
     let input = input[1..input.len() - 1].trim();
     let mut out = vec![];
     let mut in_parens = 0usize;
+    let mut in_quotes = false;
     let mut last_start = 0;
-    // todo: handle parens in enum strings?
+    let bytes = input.as_bytes();
     for (i, c) in input.char_indices() {
+        if in_quotes {
+            if c == '\'' && (i == 0 || bytes[i - 1] != b'\\') {
+                in_quotes = false;
+            }
+            continue;
+        }
         match c {
+            '\'' => {
+                in_quotes = true;
+            }
             ',' => {
                 if in_parens == 0 {
                     out.push(input[last_start..i].trim());
@@ -253,6 +263,49 @@ fn parse_scale(from: &str) -> Result<usize> {
 fn parse_precision(from: &str) -> Result<usize> {
     from.parse()
         .map_err(|_| KlickhouseError::TypeParseError("couldn't parse precision".to_string()))
+}
+
+/// Parse a single enum entry like `'hello' = 1` into (name, numeric_value).
+fn parse_enum_entry(arg: &str) -> Result<(String, i64)> {
+    let arg = arg.trim();
+    if !arg.starts_with('\'') {
+        return Err(KlickhouseError::TypeParseError(format!(
+            "enum entry must start with a quote: '{arg}'"
+        )));
+    }
+    // Find the closing quote (handle \' escapes)
+    let bytes = arg.as_bytes();
+    let mut end_quote = None;
+    let mut i = 1;
+    while i < bytes.len() {
+        if bytes[i] == b'\\' {
+            i += 2; // skip escaped character
+            continue;
+        }
+        if bytes[i] == b'\'' {
+            end_quote = Some(i);
+            break;
+        }
+        i += 1;
+    }
+    let end_quote = end_quote.ok_or_else(|| {
+        KlickhouseError::TypeParseError(format!("unterminated quote in enum entry: '{arg}'"))
+    })?;
+    let raw_name = &arg[1..end_quote];
+    // Unescape \' -> '  and \\ -> \ in the name
+    let name = raw_name.replace("\\'", "'").replace("\\\\", "\\");
+
+    let rest = arg[end_quote + 1..].trim();
+    let rest = rest.strip_prefix('=').ok_or_else(|| {
+        KlickhouseError::TypeParseError(format!("expected '=' after enum name in: '{arg}'"))
+    })?;
+    let value_str = rest.trim();
+    let value: i64 = value_str.parse().map_err(|_| {
+        KlickhouseError::TypeParseError(format!(
+            "couldn't parse enum value '{value_str}' in: '{arg}'"
+        ))
+    })?;
+    Ok((name, value))
 }
 
 impl FromStr for Type {
@@ -385,14 +438,30 @@ impl FromStr for Type {
                     }
                 }
                 "Enum8" => {
-                    return Err(KlickhouseError::TypeParseError(
-                        "unsupported Enum8 type".to_string(),
-                    ));
+                    let mut entries = Vec::with_capacity(args.len());
+                    for arg in &args {
+                        let (name, value) = parse_enum_entry(arg)?;
+                        let value = i8::try_from(value).map_err(|_| {
+                            KlickhouseError::TypeParseError(format!(
+                                "enum8 value {value} out of i8 range in: '{arg}'"
+                            ))
+                        })?;
+                        entries.push((name, value));
+                    }
+                    Type::Enum8(entries)
                 }
                 "Enum16" => {
-                    return Err(KlickhouseError::TypeParseError(
-                        "unsupported Enum16 type".to_string(),
-                    ));
+                    let mut entries = Vec::with_capacity(args.len());
+                    for arg in &args {
+                        let (name, value) = parse_enum_entry(arg)?;
+                        let value = i16::try_from(value).map_err(|_| {
+                            KlickhouseError::TypeParseError(format!(
+                                "enum16 value {value} out of i16 range in: '{arg}'"
+                            ))
+                        })?;
+                        entries.push((name, value));
+                    }
+                    Type::Enum16(entries)
                 }
                 "LowCardinality" => {
                     if args.len() != 1 {
@@ -526,18 +595,24 @@ impl Display for Type {
                 "Enum8({})",
                 items
                     .iter()
-                    .map(|(name, value)| format!("{}={}", name, value))
+                    .map(|(name, value)| {
+                        let escaped = name.replace('\\', "\\\\").replace('\'', "\\'");
+                        format!("'{}' = {}", escaped, value)
+                    })
                     .collect::<Vec<_>>()
-                    .join(",")
+                    .join(", ")
             ),
             Type::Enum16(items) => write!(
                 f,
                 "Enum16({})",
                 items
                     .iter()
-                    .map(|(name, value)| format!("{}={}", name, value))
+                    .map(|(name, value)| {
+                        let escaped = name.replace('\\', "\\\\").replace('\'', "\\'");
+                        format!("'{}' = {}", escaped, value)
+                    })
                     .collect::<Vec<_>>()
-                    .join(",")
+                    .join(", ")
             ),
             Type::LowCardinality(inner) => write!(f, "LowCardinality({})", inner),
             Type::Array(inner) => write!(f, "Array({})", inner),

@@ -10,9 +10,34 @@ Klickhouse is a pure Rust SDK for working with ClickHouse via its native protoco
 
 See [example usage](https://github.com/katanacap/klickhouse/blob/master/klickhouse/examples/basic.rs).
 
-## Unsupported Features
+## Supported Enum Types
 
-- Clickhouse `Enum8` and `Enum16` types -- use `LowCardinality` instead.
+ClickHouse `Enum8` and `Enum16` are fully supported. You can map them to `String`, raw `i8`/`i16`, or directly to a Rust enum:
+
+```rust
+// Option 1: Map to String
+#[derive(klickhouse::Row)]
+struct MyRow {
+    status: String, // reads/writes enum name, e.g. "active"
+}
+
+// Option 2: Map to a Rust enum with #[derive(ClickhouseEnum)]
+#[derive(klickhouse::ClickhouseEnum, Debug, PartialEq, Clone)]
+#[klickhouse(rename_all = "snake_case")]
+enum Status {
+    Active,                          // -> "active"
+    Inactive,                        // -> "inactive"
+    #[klickhouse(rename = "removed")]
+    Deleted,                         // -> "removed"
+}
+
+#[derive(klickhouse::Row)]
+struct MyRow2 {
+    status: Status, // maps to Enum8('active'=1, 'inactive'=2, 'removed'=3)
+}
+```
+
+Supported `rename_all` rules: `lowercase`, `UPPERCASE`, `PascalCase`, `camelCase`, `snake_case`, `SCREAMING_SNAKE_CASE`, `kebab-case`, `SCREAMING-KEBAB-CASE`.
 
 ## Running the tests
 

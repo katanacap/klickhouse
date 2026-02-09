@@ -67,6 +67,30 @@ pub use indexmap::IndexMap;
 /// - For serialization, the ordering of fields in the struct declaration must match the order in the `INSERT` statement, respectively in the table declaration. See issue [#34](https://github.com/Protryon/klickhouse/issues/34).
 pub use klickhouse_derive::Row;
 
+#[cfg(feature = "derive")]
+/// Derive macro for mapping Rust enums to ClickHouse `Enum8`/`Enum16` types.
+///
+/// Only unit enums (variants without fields) are supported. Each variant is
+/// mapped to a ClickHouse enum entry by name.
+///
+/// ## Attributes
+/// - `#[klickhouse(rename_all = "...")]` on the enum: applies a renaming rule
+///   (e.g. `snake_case`, `camelCase`, `SCREAMING_SNAKE_CASE`)
+/// - `#[klickhouse(rename = "...")]` on a variant: overrides the name for that variant
+///
+/// ## Example
+/// ```
+/// #[derive(klickhouse::ClickhouseEnum, Debug, PartialEq, Clone)]
+/// #[klickhouse(rename_all = "snake_case")]
+/// enum Status {
+///     Active,                          // -> "active"
+///     Inactive,                        // -> "inactive"
+///     #[klickhouse(rename = "removed")]
+///     Deleted,                         // -> "removed"
+/// }
+/// ```
+pub use klickhouse_derive::ClickhouseEnum;
+
 pub use client::*;
 pub use convert::*;
 pub use errors::*;

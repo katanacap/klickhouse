@@ -94,13 +94,13 @@ impl FromSql for u128 {
 
 impl FromSql for i8 {
     fn from_sql(type_: &Type, value: Value) -> Result<Self> {
-        if !matches!(type_, Type::Int8) {
+        if !matches!(type_, Type::Int8 | Type::Enum8(_)) {
             return Err(unexpected_type(type_));
         }
         match value {
-            Value::Int8(x) => Ok(x),
+            Value::Int8(x) | Value::Enum8(x) => Ok(x),
             other => Err(KlickhouseError::DeserializeError(format!(
-                "expected Int8 for i8, got {other:?}"
+                "expected Int8/Enum8 for i8, got {other:?}"
             ))),
         }
     }
@@ -108,13 +108,13 @@ impl FromSql for i8 {
 
 impl FromSql for i16 {
     fn from_sql(type_: &Type, value: Value) -> Result<Self> {
-        if !matches!(type_, Type::Int16) {
+        if !matches!(type_, Type::Int16 | Type::Enum16(_)) {
             return Err(unexpected_type(type_));
         }
         match value {
-            Value::Int16(x) => Ok(x),
+            Value::Int16(x) | Value::Enum16(x) => Ok(x),
             other => Err(KlickhouseError::DeserializeError(format!(
-                "expected Int16 for i16, got {other:?}"
+                "expected Int16/Enum16 for i16, got {other:?}"
             ))),
         }
     }
@@ -192,14 +192,42 @@ impl FromSql for f64 {
 
 impl FromSql for String {
     fn from_sql(type_: &Type, value: Value) -> Result<Self> {
-        if !matches!(type_, Type::String | Type::FixedString(_)) {
-            return Err(unexpected_type(type_));
-        }
-        match value {
-            Value::String(x) => Ok(String::from_utf8(x)?),
-            other => Err(KlickhouseError::DeserializeError(format!(
-                "expected String for String, got {other:?}"
-            ))),
+        match type_ {
+            Type::String | Type::FixedString(_) => match value {
+                Value::String(x) => Ok(String::from_utf8(x)?),
+                other => Err(KlickhouseError::DeserializeError(format!(
+                    "expected String for String, got {other:?}"
+                ))),
+            },
+            Type::Enum8(entries) => match value {
+                Value::Enum8(idx) => entries
+                    .iter()
+                    .find(|(_, v)| *v == idx)
+                    .map(|(name, _)| name.clone())
+                    .ok_or_else(|| {
+                        KlickhouseError::DeserializeError(format!(
+                            "enum8 index {idx} not found in type definition"
+                        ))
+                    }),
+                other => Err(KlickhouseError::DeserializeError(format!(
+                    "expected Enum8 for String, got {other:?}"
+                ))),
+            },
+            Type::Enum16(entries) => match value {
+                Value::Enum16(idx) => entries
+                    .iter()
+                    .find(|(_, v)| *v == idx)
+                    .map(|(name, _)| name.clone())
+                    .ok_or_else(|| {
+                        KlickhouseError::DeserializeError(format!(
+                            "enum16 index {idx} not found in type definition"
+                        ))
+                    }),
+                other => Err(KlickhouseError::DeserializeError(format!(
+                    "expected Enum16 for String, got {other:?}"
+                ))),
+            },
+            _ => Err(unexpected_type(type_)),
         }
     }
 }
