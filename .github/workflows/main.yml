@@ -33,7 +33,7 @@ jobs:
           - { rust: "1.88.0", os: ubuntu-24.04, jobname: "min_compat" }
     services:
       clickhouse:
-        image: clickhouse/clickhouse-server:lts
+        image: dhi.io/clickhouse-server:25
         ports:
           - 9000:9000
         options: >-
