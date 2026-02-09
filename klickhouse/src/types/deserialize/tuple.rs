@@ -1,4 +1,4 @@
-use crate::{io::ClickhouseRead, values::Value, Result};
+use crate::{io::ClickhouseRead, values::Value, KlickhouseError, Result};
 
 use super::{Deserializer, DeserializerState, Type};
 
@@ -16,7 +16,11 @@ impl Deserializer for TupleDeserializer {
                     item.deserialize_prefix(reader, state).await?;
                 }
             }
-            _ => unimplemented!(),
+            other => {
+                return Err(KlickhouseError::ProtocolError(format!(
+                    "unexpected type in tuple deserializer: {other}"
+                )))
+            }
         }
         Ok(())
     }
@@ -40,7 +44,11 @@ impl Deserializer for TupleDeserializer {
                     Value::Tuple(values) => {
                         values.push(value);
                     }
-                    _ => unimplemented!(),
+                    other => {
+                        return Err(KlickhouseError::ProtocolError(format!(
+                            "unexpected value in tuple deserializer: {other:?}"
+                        )))
+                    }
                 }
             }
         }

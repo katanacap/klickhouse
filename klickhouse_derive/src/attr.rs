@@ -5,6 +5,7 @@ use proc_macro2::{Span, TokenStream, TokenTree};
 use quote::ToTokens;
 use syn::parse::{self, Parse, ParseStream};
 use syn::punctuated::Punctuated;
+use syn::Token;
 use syn::{Expr, Ident, Meta};
 
 // This module handles parsing of `#[klickhouse(...)]` attributes. The entrypoints

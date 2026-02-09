@@ -22,7 +22,11 @@ impl Deserializer for MapDeserializer {
                 ])));
                 nested.deserialize_prefix(reader, state).await?;
             }
-            _ => unimplemented!(),
+            other => {
+                return Err(KlickhouseError::ProtocolError(format!(
+                    "unexpected type in map deserializer: {other}"
+                )))
+            }
         }
         Ok(())
     }
@@ -45,7 +49,11 @@ impl Deserializer for MapDeserializer {
 
         let (key, value) = match type_ {
             Type::Map(key, value) => (key, value),
-            _ => unimplemented!(),
+            other => {
+                return Err(KlickhouseError::ProtocolError(format!(
+                    "unexpected type in map deserializer: {other}"
+                )))
+            }
         };
 
         let mut offsets: Vec<u64> = Vec::with_capacity(rows);

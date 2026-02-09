@@ -41,6 +41,14 @@ pub enum KlickhouseError {
     Io(#[from] std::io::Error),
     #[error("utf-8 conversion error: {0}")]
     Utf8(#[from] FromUtf8Error),
+    #[error("timeout: {0}")]
+    Timeout(String),
+    #[error("connection error: {0}")]
+    ConnectionError(String),
+    #[error("compression error: {0}")]
+    CompressionError(String),
+    #[error("not implemented: {0}")]
+    NotImplemented(String),
 }
 
 impl KlickhouseError {
@@ -89,8 +97,71 @@ impl Clone for KlickhouseError {
             }
             Self::Io(arg0) => Self::Io(std::io::Error::new(arg0.kind(), format!("{arg0}"))),
             Self::Utf8(arg0) => Self::Utf8(arg0.clone()),
+            Self::Timeout(arg0) => Self::Timeout(arg0.clone()),
+            Self::ConnectionError(arg0) => Self::ConnectionError(arg0.clone()),
+            Self::CompressionError(arg0) => Self::CompressionError(arg0.clone()),
+            Self::NotImplemented(arg0) => Self::NotImplemented(arg0.clone()),
         }
     }
 }
 
 pub type Result<T, E = KlickhouseError> = std::result::Result<T, E>;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_timeout_display() {
+        let err = KlickhouseError::Timeout("connect timed out".into());
+        assert_eq!(err.to_string(), "timeout: connect timed out");
+    }
+
+    #[test]
+    fn test_connection_error_display() {
+        let err = KlickhouseError::ConnectionError("refused".into());
+        assert_eq!(err.to_string(), "connection error: refused");
+    }
+
+    #[test]
+    fn test_compression_error_display() {
+        let err = KlickhouseError::CompressionError("LZ4 failed".into());
+        assert_eq!(err.to_string(), "compression error: LZ4 failed");
+    }
+
+    #[test]
+    fn test_not_implemented_display() {
+        let err = KlickhouseError::NotImplemented("feature X".into());
+        assert_eq!(err.to_string(), "not implemented: feature X");
+    }
+
+    #[test]
+    fn test_new_variants_clone() {
+        let cases: Vec<KlickhouseError> = vec![
+            KlickhouseError::Timeout("t".into()),
+            KlickhouseError::ConnectionError("c".into()),
+            KlickhouseError::CompressionError("z".into()),
+            KlickhouseError::NotImplemented("n".into()),
+        ];
+        for err in &cases {
+            let cloned = err.clone();
+            assert_eq!(err.to_string(), cloned.to_string());
+        }
+    }
+
+    #[test]
+    fn test_with_column_name_passthrough_for_new_variants() {
+        // New variants should pass through with_column_name unchanged
+        let err = KlickhouseError::Timeout("t".into()).with_column_name("col");
+        assert!(matches!(err, KlickhouseError::Timeout(_)));
+
+        let err = KlickhouseError::CompressionError("c".into()).with_column_name("col");
+        assert!(matches!(err, KlickhouseError::CompressionError(_)));
+
+        let err = KlickhouseError::ConnectionError("c".into()).with_column_name("col");
+        assert!(matches!(err, KlickhouseError::ConnectionError(_)));
+
+        let err = KlickhouseError::NotImplemented("n".into()).with_column_name("col");
+        assert!(matches!(err, KlickhouseError::NotImplemented(_)));
+    }
+}

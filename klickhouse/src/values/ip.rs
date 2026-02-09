@@ -1,4 +1,5 @@
 use super::*;
+use crate::KlickhouseError;
 use std::{
     fmt,
     net::{Ipv4Addr, Ipv6Addr},
@@ -92,7 +93,9 @@ impl FromSql for Ipv4 {
         }
         match value {
             Value::Ipv4(x) => Ok(x),
-            _ => unimplemented!(),
+            other => Err(KlickhouseError::DeserializeError(format!(
+                "expected Ipv4 for Ipv4, got {other:?}"
+            ))),
         }
     }
 }
@@ -110,7 +113,9 @@ impl FromSql for Ipv6 {
         }
         match value {
             Value::Ipv6(x) => Ok(x),
-            _ => unimplemented!(),
+            other => Err(KlickhouseError::DeserializeError(format!(
+                "expected Ipv6 for Ipv6, got {other:?}"
+            ))),
         }
     }
 }

@@ -1,7 +1,9 @@
 use std::collections::VecDeque;
+use std::time::Duration;
 
 use futures_util::{stream, Stream, StreamExt};
 use indexmap::IndexMap;
+use log::*;
 use protocol::CompressionMethod;
 use tokio::{
     io::{AsyncRead, AsyncWrite, BufReader, BufWriter},
@@ -28,10 +30,12 @@ use crate::{
     protocol::{self, ServerPacket},
     KlickhouseError, ParsedQuery, RawRow, Result,
 };
-use log::*;
 
 // Maximum number of progress statuses to keep in memory. New statuses evict old ones.
 const PROGRESS_CAPACITY: usize = 100;
+
+// Default maximum number of pending queries in the queue.
+const DEFAULT_MAX_PENDING_QUERIES: usize = 10_000;
 
 struct InnerClient<R: ClickhouseRead, W: ClickhouseWrite> {
     input: InternalClientIn<R>,
@@ -86,8 +90,10 @@ impl<R: ClickhouseRead + 'static, W: ClickhouseWrite> InnerClient<R, W> {
             })
             .await?;
 
-        let (sender, receiver) = mpsc::channel(32);
-        query.response.send(receiver).ok();
+        let (sender, receiver) = mpsc::channel(self.options.block_channel_size);
+        if query.response.send(receiver).is_err() {
+            warn!("query response receiver dropped before block channel was sent");
+        }
         self.executing_query = Some((id, sender));
         self.output
             .send_data(
@@ -112,6 +118,13 @@ impl<R: ClickhouseRead + 'static, W: ClickhouseWrite> InnerClient<R, W> {
                 if self.pending_queries.is_empty() && self.executing_query.is_none() {
                     self.dispatch_query(query).await?;
                 } else {
+                    if self.pending_queries.len() >= self.options.max_pending_queries {
+                        warn!(
+                            "pending query queue full ({} queries), dropping oldest",
+                            self.options.max_pending_queries
+                        );
+                        self.pending_queries.pop_front();
+                    }
                     self.pending_queries.push_back(query);
                 }
             }
@@ -119,7 +132,9 @@ impl<R: ClickhouseRead + 'static, W: ClickhouseWrite> InnerClient<R, W> {
                 self.output
                     .send_data(block, CompressionMethod::default(), "", false)
                     .await?;
-                response.send(()).ok();
+                if response.send(()).is_err() {
+                    warn!("send_data response receiver dropped");
+                }
             }
         }
         Ok(())
@@ -134,7 +149,9 @@ impl<R: ClickhouseRead + 'static, W: ClickhouseWrite> InnerClient<R, W> {
             }
             ServerPacket::Data(block) => {
                 if let Some((_, current)) = self.executing_query.as_ref() {
-                    current.send(Ok(block.block)).await.ok();
+                    if current.send(Ok(block.block)).await.is_err() {
+                        debug!("block receiver dropped, data block discarded (expected if query stream was consumed)");
+                    }
                 } else {
                     return Err(KlickhouseError::ProtocolError(
                         "received data block, but no pending queries".to_string(),
@@ -143,7 +160,9 @@ impl<R: ClickhouseRead + 'static, W: ClickhouseWrite> InnerClient<R, W> {
             }
             ServerPacket::Exception(e) => {
                 if let Some((_, current)) = self.executing_query.take() {
-                    current.send(Err(e.emit())).await.ok();
+                    if current.send(Err(e.emit())).await.is_err() {
+                        warn!("block receiver dropped, server exception lost: consider consuming the full query stream");
+                    }
                     if let Some(query) = self.pending_queries.pop_front() {
                         self.dispatch_query(query).await?;
                     }
@@ -194,10 +213,10 @@ impl<R: ClickhouseRead + 'static, W: ClickhouseWrite> InnerClient<R, W> {
         loop {
             select! {
                 request = input.recv() => {
-                    if request.is_none() {
-                        return Ok(());
+                    match request {
+                        Some(request) => self.handle_request(request).await?,
+                        None => return Ok(()),
                     }
-                    self.handle_request(request.unwrap()).await?;
                 },
                 packet = self.input.receive_packet() => {
                     let packet = packet?;
@@ -243,6 +262,19 @@ pub struct ClientOptions {
     pub password: String,
     pub default_database: String,
     pub tcp_nodelay: bool,
+    /// Timeout for establishing a TCP connection. `None` means no timeout (OS default).
+    pub connect_timeout: Option<Duration>,
+    /// TCP keepalive interval. `None` disables keepalive.
+    /// Recommended for production to detect dead connections through NAT/firewalls.
+    pub tcp_keepalive: Option<Duration>,
+    /// Maximum number of queries that can be queued while waiting for the current query to complete.
+    /// When the limit is reached, the oldest pending query is dropped with a warning.
+    pub max_pending_queries: usize,
+    /// Size of the mpsc channel buffer for streaming blocks from a single query result.
+    /// Larger values reduce backpressure but increase memory usage.
+    pub block_channel_size: usize,
+    /// Size of the mpsc channel buffer for the client request queue.
+    pub request_channel_size: usize,
 }
 
 impl Default for ClientOptions {
@@ -252,8 +284,28 @@ impl Default for ClientOptions {
             password: String::new(),
             default_database: String::new(),
             tcp_nodelay: true,
+            connect_timeout: Some(Duration::from_secs(10)),
+            tcp_keepalive: Some(Duration::from_secs(60)),
+            max_pending_queries: DEFAULT_MAX_PENDING_QUERIES,
+            block_channel_size: 32,
+            request_channel_size: 1024,
         }
     }
+}
+
+fn configure_tcp_stream(
+    stream: &TcpStream,
+    options: &ClientOptions,
+) -> std::result::Result<(), std::io::Error> {
+    stream.set_nodelay(options.tcp_nodelay)?;
+
+    if let Some(keepalive_duration) = options.tcp_keepalive {
+        let sock_ref = socket2::SockRef::from(stream);
+        let keepalive = socket2::TcpKeepalive::new().with_time(keepalive_duration);
+        sock_ref.set_tcp_keepalive(&keepalive)?;
+    }
+
+    Ok(())
 }
 
 impl Client {
@@ -273,8 +325,15 @@ impl Client {
 
     /// Connects to a specific socket address over plaintext TCP for Clickhouse.
     pub async fn connect<A: ToSocketAddrs>(destination: A, options: ClientOptions) -> Result<Self> {
-        let stream = TcpStream::connect(destination).await?;
-        stream.set_nodelay(options.tcp_nodelay)?;
+        let stream = match options.connect_timeout {
+            Some(timeout) => tokio::time::timeout(timeout, TcpStream::connect(destination))
+                .await
+                .map_err(|_| {
+                    KlickhouseError::Timeout(format!("TCP connect timed out after {:?}", timeout))
+                })??,
+            None => TcpStream::connect(destination).await?,
+        };
+        configure_tcp_stream(&stream, &options)?;
         let (read, writer) = stream.into_split();
         Self::connect_stream(read, writer, options).await
     }
@@ -287,8 +346,15 @@ impl Client {
         name: rustls_pki_types::ServerName<'static>,
         connector: &tokio_rustls::TlsConnector,
     ) -> Result<Self> {
-        let stream = TcpStream::connect(destination).await?;
-        stream.set_nodelay(options.tcp_nodelay)?;
+        let stream = match options.connect_timeout {
+            Some(timeout) => tokio::time::timeout(timeout, TcpStream::connect(destination))
+                .await
+                .map_err(|_| {
+                    KlickhouseError::Timeout(format!("TCP connect timed out after {:?}", timeout))
+                })??,
+            None => TcpStream::connect(destination).await?,
+        };
+        configure_tcp_stream(&stream, &options)?;
         let tls_stream = connector.connect(name, stream).await?;
         let (read, writer) = tokio::io::split(tls_stream);
         Self::connect_stream(read, writer, options).await
@@ -298,7 +364,7 @@ impl Client {
         inner: InnerClient<R, W>,
     ) -> Result<Self> {
         let progress = inner.progress.clone();
-        let (sender, receiver) = mpsc::channel(1024);
+        let (sender, receiver) = mpsc::channel(inner.options.request_channel_size);
 
         tokio::spawn(inner.run(receiver));
         let client = Client { sender, progress };
@@ -388,6 +454,8 @@ impl Client {
     /// Sends a query string with streaming associated data (i.e. insert) over native protocol.
     /// Once all outgoing blocks are written (EOF of `blocks` stream), then any response blocks from Clickhouse are read and DISCARDED.
     /// Make sure any query you send native data with has a `format native` suffix.
+    ///
+    /// **Note:** Serialization errors are propagated (not silently skipped).
     pub async fn insert_native<T: Row + Send + Sync + 'static>(
         &self,
         query: impl TryInto<ParsedQuery, Error = KlickhouseError>,
@@ -419,15 +487,12 @@ impl Client {
                 column_types: first_block.column_types.clone(),
                 column_data: IndexMap::new(),
             };
-            rows.into_iter()
+            let serialized_rows: Vec<_> = rows
+                .into_iter()
                 .map(|x| x.serialize_row(&first_block.column_types))
-                .filter_map(|x| match x {
-                    Err(e) => {
-                        error!("serialization error during insert (SKIPPED ROWS!): {:?}", e);
-                        None
-                    }
-                    Ok(x) => Some(x),
-                })
+                .collect::<Result<Vec<_>>>()?;
+            serialized_rows
+                .into_iter()
                 .try_for_each(|x| -> Result<()> {
                     for (key, value) in x {
                         let type_ = first_block.column_types.get(&*key).ok_or_else(|| {
@@ -555,5 +620,57 @@ impl Client {
     ///       an ID (and possibly directly the streaming broadcast).
     pub fn subscribe_progress(&self) -> broadcast::Receiver<(Uuid, Progress)> {
         self.progress.subscribe()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_client_options_defaults() {
+        let opts = ClientOptions::default();
+        assert_eq!(opts.username, "default");
+        assert!(opts.password.is_empty());
+        assert!(opts.default_database.is_empty());
+        assert!(opts.tcp_nodelay);
+        assert_eq!(opts.connect_timeout, Some(Duration::from_secs(10)));
+        assert_eq!(opts.tcp_keepalive, Some(Duration::from_secs(60)));
+        assert_eq!(opts.max_pending_queries, DEFAULT_MAX_PENDING_QUERIES);
+        assert_eq!(opts.block_channel_size, 32);
+        assert_eq!(opts.request_channel_size, 1024);
+    }
+
+    #[test]
+    fn test_client_options_custom() {
+        let opts = ClientOptions {
+            username: "admin".to_string(),
+            password: "secret".to_string(),
+            default_database: "mydb".to_string(),
+            tcp_nodelay: false,
+            connect_timeout: Some(Duration::from_secs(5)),
+            tcp_keepalive: None,
+            max_pending_queries: 500,
+            block_channel_size: 64,
+            request_channel_size: 2048,
+        };
+        assert_eq!(opts.username, "admin");
+        assert_eq!(opts.password, "secret");
+        assert_eq!(opts.default_database, "mydb");
+        assert!(!opts.tcp_nodelay);
+        assert_eq!(opts.connect_timeout, Some(Duration::from_secs(5)));
+        assert!(opts.tcp_keepalive.is_none());
+        assert_eq!(opts.max_pending_queries, 500);
+        assert_eq!(opts.block_channel_size, 64);
+        assert_eq!(opts.request_channel_size, 2048);
+    }
+
+    #[test]
+    fn test_client_options_no_timeout() {
+        let opts = ClientOptions {
+            connect_timeout: None,
+            ..Default::default()
+        };
+        assert!(opts.connect_timeout.is_none());
     }
 }

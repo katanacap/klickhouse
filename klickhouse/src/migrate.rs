@@ -1,4 +1,5 @@
 use crate::{query_parser, ClickhouseLock, FromSql};
+use log::warn;
 use refinery_core::traits::r#async::{AsyncMigrate, AsyncQuery, AsyncTransaction};
 use refinery_core::Migration;
 use std::borrow::Cow;
@@ -57,9 +58,20 @@ impl MigrationInner {
 
 impl From<MigrationInner> for Migration {
     fn from(inner: MigrationInner) -> Self {
+        // SAFETY: `MigrationInner` is a field-for-field copy of `refinery_core::Migration`
+        // (which has no public constructor). The size assertion guards against layout changes
+        // if `refinery-core` is updated. The exact version pin `=0.8.16` in Cargo.toml
+        // ensures this layout is stable. If you bump refinery-core, re-verify the layout.
         assert_eq!(
             std::mem::size_of::<Migration>(),
-            std::mem::size_of::<MigrationInner>()
+            std::mem::size_of::<MigrationInner>(),
+            "MigrationInner and refinery_core::Migration have different sizes -- \
+             refinery-core layout may have changed, update MigrationInner accordingly"
+        );
+        assert_eq!(
+            std::mem::align_of::<Migration>(),
+            std::mem::align_of::<MigrationInner>(),
+            "MigrationInner and refinery_core::Migration have different alignment"
         );
         unsafe { std::mem::transmute(inner) }
     }
@@ -168,7 +180,9 @@ impl Row for Migration {
         self,
         _type_hints: &indexmap::IndexMap<String, Type>,
     ) -> Result<Vec<(Cow<'static, str>, Value)>> {
-        unimplemented!()
+        Err(KlickhouseError::NotImplemented(
+            "Migration rows are read-only and cannot be serialized".to_string(),
+        ))
     }
 }
 
@@ -183,10 +197,20 @@ impl AsyncTransaction for Client {
             if let Some(handle) = lock.try_lock().await? {
                 break handle;
             } else {
-                tokio::time::sleep(Duration::from_millis(250)).await;
-                if start.elapsed() > Duration::from_secs(60) {
-                    lock.reset().await?;
+                let elapsed = start.elapsed();
+                if elapsed > Duration::from_secs(300) {
+                    return Err(KlickhouseError::Timeout(format!(
+                        "migration lock acquisition timed out after {:?}",
+                        elapsed,
+                    )));
                 }
+                if elapsed > Duration::from_secs(60) {
+                    warn!(
+                        "migration lock held for {:?}, still waiting (will timeout at 5 min)",
+                        elapsed,
+                    );
+                }
+                tokio::time::sleep(Duration::from_millis(250)).await;
             }
         };
         for query in queries {
@@ -259,10 +283,20 @@ impl<T: ClusterName> AsyncTransaction for ClusterMigration<T> {
             if let Some(handle) = lock.try_lock().await? {
                 break handle;
             } else {
-                tokio::time::sleep(Duration::from_millis(250)).await;
-                if start.elapsed() > Duration::from_secs(60) {
-                    lock.reset().await?;
+                let elapsed = start.elapsed();
+                if elapsed > Duration::from_secs(300) {
+                    return Err(KlickhouseError::Timeout(format!(
+                        "cluster migration lock acquisition timed out after {:?}",
+                        elapsed,
+                    )));
                 }
+                if elapsed > Duration::from_secs(60) {
+                    warn!(
+                        "cluster migration lock held for {:?}, still waiting (will timeout at 5 min)",
+                        elapsed,
+                    );
+                }
+                tokio::time::sleep(Duration::from_millis(250)).await;
             }
         };
         for query in queries {

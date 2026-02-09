@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 
 use syn::punctuated::Pair;
+use syn::Token;
 
 use crate::ast::Container;
 use crate::{attr, internal::ungroup};

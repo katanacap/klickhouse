@@ -1,6 +1,6 @@
 use tokio::io::AsyncWriteExt;
 
-use crate::{io::ClickhouseWrite, values::Value, Result};
+use crate::{io::ClickhouseWrite, values::Value, KlickhouseError, Result};
 
 use super::{Serializer, SerializerState, Type};
 pub struct NullableSerializer;
@@ -15,7 +15,9 @@ impl Serializer for NullableSerializer {
         let inner_type = if let Type::Nullable(n) = type_ {
             &**n
         } else {
-            unimplemented!()
+            return Err(KlickhouseError::ProtocolError(format!(
+                "unexpected type in nullable serializer: {type_}"
+            )));
         };
 
         let mask = values

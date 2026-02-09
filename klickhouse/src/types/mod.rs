@@ -86,7 +86,7 @@ impl Type {
     pub fn unwrap_array(&self) -> &Type {
         match self {
             Type::Array(x) => x,
-            _ => unimplemented!(),
+            other => panic!("unwrap_array called on non-array type: {other}"),
         }
     }
 
@@ -100,7 +100,7 @@ impl Type {
     pub fn unwrap_map(&self) -> (&Type, &Type) {
         match self {
             Type::Map(key, value) => (&**key, &**value),
-            _ => unimplemented!(),
+            other => panic!("unwrap_map called on non-map type: {other}"),
         }
     }
 
@@ -114,7 +114,7 @@ impl Type {
     pub fn unwrap_tuple(&self) -> &[Type] {
         match self {
             Type::Tuple(x) => &x[..],
-            _ => unimplemented!(),
+            other => panic!("unwrap_tuple called on non-tuple type: {other}"),
         }
     }
 

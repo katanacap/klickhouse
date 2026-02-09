@@ -47,7 +47,9 @@ impl FromSql for Date {
         }
         match value {
             Value::Date(x) => Ok(x),
-            _ => unimplemented!(),
+            other => Err(KlickhouseError::DeserializeError(format!(
+                "expected Date for Date, got {other:?}"
+            ))),
         }
     }
 }
@@ -134,7 +136,9 @@ impl FromSql for DateTime {
         }
         match value {
             Value::DateTime(x) => Ok(x),
-            _ => unimplemented!(),
+            other => Err(KlickhouseError::DeserializeError(format!(
+                "expected DateTime for DateTime, got {other:?}"
+            ))),
         }
     }
 }
@@ -290,7 +294,9 @@ impl<const PRECISION: usize> FromSql for DateTime64<PRECISION> {
         }
         match value {
             Value::DateTime64(datetime) => Ok(Self(datetime.0, datetime.1)),
-            _ => unimplemented!(),
+            other => Err(KlickhouseError::DeserializeError(format!(
+                "expected DateTime64 for DateTime64, got {other:?}"
+            ))),
         }
     }
 }
@@ -341,7 +347,9 @@ impl FromSql for chrono::DateTime<Utc> {
             Value::DateTime(date) => Ok(date.try_into().map_err(|e| {
                 KlickhouseError::DeserializeError(format!("failed to convert DateTime: {:?}", e))
             })?),
-            _ => unimplemented!(),
+            other => Err(KlickhouseError::DeserializeError(format!(
+                "expected DateTime64 or DateTime for chrono::DateTime<Utc>, got {other:?}"
+            ))),
         }
     }
 }
@@ -412,7 +420,9 @@ impl FromSql for chrono::DateTime<Tz> {
             Value::DateTime(date) => Ok(date.try_into().map_err(|e| {
                 KlickhouseError::DeserializeError(format!("failed to convert DateTime: {:?}", e))
             })?),
-            _ => unimplemented!(),
+            other => Err(KlickhouseError::DeserializeError(format!(
+                "expected DateTime64 or DateTime for chrono::DateTime<Tz>, got {other:?}"
+            ))),
         }
     }
 }

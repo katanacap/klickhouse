@@ -1,6 +1,6 @@
 use tokio::io::AsyncWriteExt;
 
-use crate::{io::ClickhouseWrite, values::Value, Result};
+use crate::{io::ClickhouseWrite, values::Value, KlickhouseError, Result};
 
 use super::{Serializer, SerializerState, Type};
 
@@ -20,7 +20,11 @@ impl Serializer for MapSerializer {
                 ])));
                 nested.serialize_prefix(writer, state).await?;
             }
-            _ => unimplemented!(),
+            other => {
+                return Err(KlickhouseError::ProtocolError(format!(
+                    "unexpected type in map serializer: {other}"
+                )))
+            }
         }
         Ok(())
     }
@@ -33,7 +37,11 @@ impl Serializer for MapSerializer {
     ) -> Result<()> {
         let (key_type, value_type) = match type_ {
             Type::Map(key, value) => (key, value),
-            _ => unimplemented!(),
+            other => {
+                return Err(KlickhouseError::ProtocolError(format!(
+                    "unexpected type in map serializer: {other}"
+                )))
+            }
         };
 
         let mut total_keys = vec![];
@@ -42,7 +50,11 @@ impl Serializer for MapSerializer {
         for value in values {
             let (keys, values) = match value {
                 Value::Map(keys, values) => (keys, values),
-                _ => unimplemented!(),
+                other => {
+                    return Err(KlickhouseError::ProtocolError(format!(
+                        "unexpected value in map serializer: {other:?}"
+                    )))
+                }
             };
             assert_eq!(keys.len(), values.len());
             writer

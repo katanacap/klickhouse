@@ -1,7 +1,7 @@
 use crate::{
     convert::{unexpected_type, FromSql},
     types::Type,
-    Result, Uuid,
+    KlickhouseError, Result, Uuid,
 };
 
 use crate::{convert::ToSql, Value};
@@ -19,7 +19,9 @@ impl FromSql for Uuid {
         }
         match value {
             Value::Uuid(x) => Ok(x),
-            _ => unimplemented!(),
+            other => Err(KlickhouseError::DeserializeError(format!(
+                "expected Uuid for Uuid, got {other:?}"
+            ))),
         }
     }
 }

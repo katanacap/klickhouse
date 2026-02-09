@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use log::error;
+use log::{error, warn};
 
 use crate::{Client, KlickhouseError};
 
@@ -13,6 +13,10 @@ pub struct ClickhouseLock {
 }
 
 /// A handle, that when dropped, attempts to unlock the owning lock.
+///
+/// **Important:** Prefer calling [`.unlock().await`](ClickhouseLockHandle::unlock) explicitly
+/// over relying on `Drop`. The `Drop` implementation spawns a detached tokio task, which may
+/// not complete if the runtime is shutting down -- leaving the lock held.
 pub struct ClickhouseLockHandle<'a> {
     lock: Option<&'a ClickhouseLock>,
 }
@@ -90,15 +94,25 @@ impl ClickhouseLock {
 }
 
 impl ClickhouseLockHandle<'_> {
-    /// Unlocks this handle (without spawning a tokio task)
+    /// Unlocks this handle explicitly (without spawning a tokio task).
+    /// Prefer this over relying on `Drop`.
     pub async fn unlock(mut self) -> Result<(), KlickhouseError> {
-        self.lock.take().unwrap().reset().await
+        match self.lock.take() {
+            Some(lock) => lock.reset().await,
+            None => {
+                warn!("ClickhouseLockHandle::unlock called on already-unlocked handle");
+                Ok(())
+            }
+        }
     }
 }
 
 impl Drop for ClickhouseLockHandle<'_> {
     fn drop(&mut self) {
         if let Some(lock) = self.lock.take().cloned() {
+            // NOTE: This spawns a detached task. If the tokio runtime is shutting down,
+            // this task may not execute, leaving the lock held. Always prefer calling
+            // `.unlock().await` explicitly when possible.
             tokio::spawn(async move {
                 if let Err(e) = lock.reset().await {
                     error!("failed to reset lock: {}: {e:?}", lock.name);

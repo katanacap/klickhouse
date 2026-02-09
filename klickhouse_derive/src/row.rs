@@ -4,6 +4,8 @@ use crate::fragment::{Expr, Fragment, Match, Stmts};
 use crate::receiver::replace_receiver;
 use crate::{attr, bound, dummy};
 use proc_macro2::{Span, TokenStream};
+use quote::{format_ident, quote, quote_spanned};
+use syn::parse_quote;
 use syn::spanned::Spanned;
 use syn::{GenericArgument, Ident, Member, PathArguments, Type};
 

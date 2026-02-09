@@ -1,7 +1,7 @@
 use indexmap::IndexSet;
 use tokio::io::AsyncWriteExt;
 
-use crate::{io::ClickhouseWrite, values::Value, Result};
+use crate::{io::ClickhouseWrite, values::Value, KlickhouseError, Result};
 
 use super::{Serializer, SerializerState, Type};
 
@@ -27,7 +27,11 @@ impl Serializer for LowCardinalitySerializer {
     ) -> Result<()> {
         let inner_type = match type_ {
             Type::LowCardinality(x) => &**x,
-            _ => unimplemented!(),
+            other => {
+                return Err(KlickhouseError::ProtocolError(format!(
+                    "unexpected type in low cardinality serializer: {other}"
+                )))
+            }
         };
 
         if values.is_empty() {

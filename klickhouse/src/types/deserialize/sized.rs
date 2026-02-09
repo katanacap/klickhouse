@@ -3,7 +3,10 @@ use std::net::{Ipv4Addr, Ipv6Addr};
 use tokio::io::AsyncReadExt;
 use uuid::Uuid;
 
-use crate::{i256, io::ClickhouseRead, u256, values::Value, Date, DateTime, DynDateTime64, Result};
+use crate::{
+    i256, io::ClickhouseRead, u256, values::Value, Date, DateTime, DynDateTime64, KlickhouseError,
+    Result,
+};
 
 use super::{Deserializer, DeserializerState, Type};
 
@@ -71,7 +74,11 @@ impl Deserializer for SizedDeserializer {
                 }
                 Type::Enum8(_) => Value::Enum8(reader.read_i8().await?),
                 Type::Enum16(_) => Value::Enum16(reader.read_i16_le().await?),
-                _ => unimplemented!(),
+                other => {
+                    return Err(KlickhouseError::ProtocolError(format!(
+                        "unexpected type in sized deserializer: {other}"
+                    )))
+                }
             });
         }
         Ok(out)

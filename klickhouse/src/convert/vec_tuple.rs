@@ -26,7 +26,11 @@ impl<T: FromSql> FromSql for VecTuple<T> {
         };
         let values = match value {
             Value::Tuple(n) => n,
-            _ => unimplemented!(),
+            other => {
+                return Err(KlickhouseError::DeserializeError(format!(
+                    "expected Tuple value, got {other:?}"
+                )))
+            }
         };
         if values.len() != subtype.len() {
             return Err(KlickhouseError::DeserializeError(format!(

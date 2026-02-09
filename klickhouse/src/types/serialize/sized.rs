@@ -1,6 +1,6 @@
 use tokio::io::AsyncWriteExt;
 
-use crate::{io::ClickhouseWrite, values::Value, Result};
+use crate::{io::ClickhouseWrite, values::Value, KlickhouseError, Result};
 
 use super::{Serializer, SerializerState, Type};
 
@@ -52,7 +52,11 @@ impl Serializer for SizedSerializer {
                 Value::Ipv6(x) => writer.write_all(&x.octets()[..]).await?,
                 Value::Enum8(x) => writer.write_i8(*x).await?,
                 Value::Enum16(x) => writer.write_i16_le(*x).await?,
-                _ => unimplemented!(),
+                other => {
+                    return Err(KlickhouseError::ProtocolError(format!(
+                        "unexpected type in sized serializer: {other:?}"
+                    )))
+                }
             }
         }
         Ok(())

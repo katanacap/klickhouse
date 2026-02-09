@@ -1,4 +1,4 @@
-use crate::{io::ClickhouseWrite, values::Value, Result};
+use crate::{io::ClickhouseWrite, values::Value, KlickhouseError, Result};
 
 use super::{Serializer, SerializerState, Type};
 
@@ -16,7 +16,11 @@ impl Serializer for TupleSerializer {
                     item.serialize_prefix(writer, state).await?;
                 }
             }
-            _ => unimplemented!(),
+            other => {
+                return Err(KlickhouseError::ProtocolError(format!(
+                    "unexpected type in tuple serializer: {other}"
+                )))
+            }
         }
         Ok(())
     }
@@ -30,7 +34,9 @@ impl Serializer for TupleSerializer {
         let inner_types = if let Type::Tuple(inner_types) = &type_ {
             inner_types
         } else {
-            unimplemented!();
+            return Err(KlickhouseError::ProtocolError(format!(
+                "unexpected type in tuple serializer: {type_}"
+            )));
         };
 
         let mut columns = vec![Vec::with_capacity(values.len()); inner_types.len()];

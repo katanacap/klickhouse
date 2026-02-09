@@ -2,7 +2,7 @@ use crate::{
     convert::{unexpected_type, FromSql, ToSql},
     i256,
     types::Type,
-    Result, Value,
+    KlickhouseError, Result, Value,
 };
 
 /// Wrapper type for Clickhouse `FixedPoint32` type.
@@ -36,7 +36,9 @@ impl<const PRECISION: u64> FromSql for FixedPoint32<PRECISION> {
         }
         match value {
             Value::Decimal32(_, x) => Ok(Self(x)),
-            _ => unimplemented!(),
+            other => Err(KlickhouseError::DeserializeError(format!(
+                "expected Decimal32 for FixedPoint32, got {other:?}"
+            ))),
         }
     }
 }
@@ -64,7 +66,9 @@ impl<const PRECISION: u64> FromSql for FixedPoint64<PRECISION> {
         }
         match value {
             Value::Decimal64(_, x) => Ok(Self(x)),
-            _ => unimplemented!(),
+            other => Err(KlickhouseError::DeserializeError(format!(
+                "expected Decimal64 for FixedPoint64, got {other:?}"
+            ))),
         }
     }
 }
@@ -106,7 +110,9 @@ impl<const PRECISION: u64> FromSql for FixedPoint128<PRECISION> {
         }
         match value {
             Value::Decimal128(_, x) => Ok(Self(x)),
-            _ => unimplemented!(),
+            other => Err(KlickhouseError::DeserializeError(format!(
+                "expected Decimal128 for FixedPoint128, got {other:?}"
+            ))),
         }
     }
 }
@@ -148,7 +154,9 @@ impl<const PRECISION: u64> FromSql for FixedPoint256<PRECISION> {
         }
         match value {
             Value::Decimal256(_, x) => Ok(Self(x)),
-            _ => unimplemented!(),
+            other => Err(KlickhouseError::DeserializeError(format!(
+                "expected Decimal256 for FixedPoint256, got {other:?}"
+            ))),
         }
     }
 }

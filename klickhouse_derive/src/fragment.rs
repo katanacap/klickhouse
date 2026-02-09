@@ -1,6 +1,7 @@
 use proc_macro2::TokenStream;
 use quote::ToTokens;
 use syn::token;
+use syn::Token;
 
 pub enum Fragment {
     /// Tokens that can be used as an expression.

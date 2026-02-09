@@ -12,7 +12,7 @@ description = "Klickhouse is a pure Rust SDK for working with Clickhouse with th
 keywords = ["clickhouse", "database", "tokio", "sql"]
 readme = "../README.md"
 autotests = false
-rust-version = "1.85.0"
+rust-version = "1.88.0"
 
 [package.metadata.docs.rs]
 all-features = true
@@ -36,7 +36,8 @@ name = "basic"
 ###################################
 [dependencies]
 # -- Main dependencies --
-tokio = { version = "1.49.0", features = ["io-util", "net", "rt", "macros"] }
+tokio = { version = "1.49.0", features = ["io-util", "net", "rt", "macros", "time"] }
+socket2 = { version = "0.5", features = ["all"] }
 async-trait = "0.1.89"
 thiserror = "2.0.18"
 log = "0.4.29"
@@ -115,9 +116,3 @@ tls = ["tokio-rustls", "rustls-pki-types"]
 
 # Connection pooling (bb8)
 bb8 = ["dep:bb8"]
-
-###################################
-#  Build Dependencies
-###################################
-[build-dependencies]
-rustc_version = "0.4.1"

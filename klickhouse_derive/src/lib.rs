@@ -1,8 +1,3 @@
-#[macro_use]
-extern crate syn;
-#[macro_use]
-extern crate quote;
-
 mod ast;
 mod attr;
 mod bound;
@@ -18,6 +13,8 @@ mod row;
 mod symbol;
 
 use proc_macro::TokenStream;
+use quote::quote;
+use syn::parse_macro_input;
 use syn::DeriveInput;
 
 fn to_compile_errors(errors: Vec<syn::Error>) -> proc_macro2::TokenStream {

@@ -62,7 +62,9 @@ impl<R: ClickhouseRead + 'static> InternalClientIn<R> {
 
     #[cfg(not(feature = "compression"))]
     async fn decompress_data(&mut self, _compression: CompressionMethod) -> Result<Block> {
-        panic!("attempted to use compression when not compiled with `compression` feature in klickhouse");
+        Err(KlickhouseError::CompressionError(
+            "attempted to use compression when not compiled with `compression` feature in klickhouse".to_string(),
+        ))
     }
 
     async fn receive_data(&mut self, compression: CompressionMethod) -> Result<ServerData> {
@@ -79,7 +81,8 @@ impl<R: ClickhouseRead + 'static> InternalClientIn<R> {
     }
 
     async fn receive_log_data(&mut self) -> Result<ServerData> {
-        unimplemented!()
+        // Log data uses the same wire format as regular data blocks, without compression.
+        self.receive_data(CompressionMethod::None).await
     }
 
     pub async fn receive_packet(&mut self) -> Result<ServerPacket> {

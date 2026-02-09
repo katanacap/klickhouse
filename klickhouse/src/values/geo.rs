@@ -1,6 +1,7 @@
 //! Geo types
 //! <https://clickhouse.com/docs/en/sql-reference/data-types/geo>
 use super::*;
+use crate::KlickhouseError;
 
 #[derive(Clone, Default, Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -60,7 +61,10 @@ macro_rules! to_from_sql {
                 }
                 match value {
                     Value::$name(x) => Ok(x),
-                    _ => unimplemented!(),
+                    other => Err(KlickhouseError::DeserializeError(format!(
+                        "expected {} value, got {other:?}",
+                        stringify!($name)
+                    ))),
                 }
             }
         }
@@ -74,6 +78,7 @@ to_from_sql!(MultiPolygon);
 #[cfg(feature = "geo-types")]
 mod nav_types_conversions {
     use super::*;
+    use crate::KlickhouseError;
 
     macro_rules! to_from_sql {
         ($geo_t:path, $ch_t:ident) => {
@@ -89,7 +94,10 @@ mod nav_types_conversions {
                     }
                     match value {
                         Value::$ch_t(x) => Ok(x.into()),
-                        _ => unimplemented!(),
+                        other => Err(KlickhouseError::DeserializeError(format!(
+                            "expected {} value, got {other:?}",
+                            stringify!($ch_t)
+                        ))),
                     }
                 }
             }

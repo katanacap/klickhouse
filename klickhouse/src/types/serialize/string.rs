@@ -1,6 +1,6 @@
 use tokio::io::AsyncWriteExt;
 
-use crate::{io::ClickhouseWrite, values::Value, Result};
+use crate::{io::ClickhouseWrite, values::Value, KlickhouseError, Result};
 
 use super::{Serializer, SerializerState, Type};
 
@@ -40,14 +40,20 @@ impl Serializer for StringSerializer {
                     let bytes = items
                         .iter()
                         .map(|x| match x {
-                            Value::UInt8(x) => *x,
-                            Value::Int8(x) => *x as u8,
-                            _ => unimplemented!(),
+                            Value::UInt8(x) => Ok(*x),
+                            Value::Int8(x) => Ok(*x as u8),
+                            other => Err(KlickhouseError::ProtocolError(format!(
+                                "unexpected value in string serializer array: {other:?}"
+                            ))),
                         })
-                        .collect::<Vec<u8>>();
+                        .collect::<crate::Result<Vec<u8>>>()?;
                     emit_bytes(type_, &bytes, writer).await?;
                 }
-                _ => unimplemented!(),
+                other => {
+                    return Err(KlickhouseError::ProtocolError(format!(
+                        "unexpected type in string serializer: {other:?}"
+                    )))
+                }
             }
         }
         Ok(())

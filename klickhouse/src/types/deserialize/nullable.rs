@@ -1,6 +1,6 @@
 use tokio::io::AsyncReadExt;
 
-use crate::{io::ClickhouseRead, values::Value, Result};
+use crate::{io::ClickhouseRead, values::Value, KlickhouseError, Result};
 
 use super::{Deserializer, DeserializerState, Type};
 
@@ -16,7 +16,11 @@ impl Deserializer for NullableDeserializer {
             Type::Nullable(inner) => {
                 inner.deserialize_prefix(reader, state).await?;
             }
-            _ => unimplemented!(),
+            other => {
+                return Err(KlickhouseError::ProtocolError(format!(
+                    "unexpected type in nullable deserializer: {other}"
+                )))
+            }
         }
         Ok(())
     }

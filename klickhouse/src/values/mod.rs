@@ -205,28 +205,40 @@ impl Value {
             Value::UInt16(x) => *x as usize,
             Value::UInt32(x) => *x as usize,
             Value::UInt64(x) => *x as usize,
-            _ => unimplemented!(),
+            other => panic!(
+                "index_value called on non-uint value: {:?}",
+                std::mem::discriminant(other)
+            ),
         }
     }
 
     pub fn unwrap_array_ref(&self) -> &[Value] {
         match self {
             Value::Array(a) => &a[..],
-            _ => unimplemented!(),
+            other => panic!(
+                "unwrap_array_ref called on non-array value: {:?}",
+                std::mem::discriminant(other)
+            ),
         }
     }
 
     pub fn unwrap_array(self) -> Vec<Value> {
         match self {
             Value::Array(a) => a,
-            _ => unimplemented!(),
+            other => panic!(
+                "unwrap_array called on non-array value: {:?}",
+                std::mem::discriminant(&other)
+            ),
         }
     }
 
     pub fn unwrap_tuple(self) -> Vec<Value> {
         match self {
             Value::Tuple(a) => a,
-            _ => unimplemented!(),
+            other => panic!(
+                "unwrap_tuple called on non-tuple value: {:?}",
+                std::mem::discriminant(&other)
+            ),
         }
     }
 
@@ -281,8 +293,8 @@ impl Value {
             Value::Date(_) => Type::Date,
             Value::DateTime(time) => Type::DateTime(time.0),
             Value::DateTime64(x) => Type::DateTime64(x.2, x.0),
-            Value::Enum8(_) => unimplemented!(),
-            Value::Enum16(_) => unimplemented!(),
+            Value::Enum8(_) => Type::Enum8(vec![]),
+            Value::Enum16(_) => Type::Enum16(vec![]),
             Value::Array(x) => Type::Array(Box::new(
                 x.first().map(|x| x.guess_type()).unwrap_or(Type::String),
             )),
@@ -380,8 +392,15 @@ impl fmt::Display for Value {
                     write!(f, "{pre}.{fraction}")
                 }
             }
-            Value::Decimal256(..) => {
-                unimplemented!("Decimal256 display not implemented");
+            Value::Decimal256(precision, value) => {
+                let raw_value = format!("{value:?}");
+                if raw_value.len() < *precision {
+                    write!(f, "{raw_value}")
+                } else {
+                    let pre = &raw_value[..raw_value.len() - precision];
+                    let fraction = &raw_value[raw_value.len() - precision..];
+                    write!(f, "{pre}.{fraction}")
+                }
             }
             Value::String(string) => {
                 write!(f, "'")?;

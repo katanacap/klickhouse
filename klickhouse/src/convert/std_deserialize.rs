@@ -15,7 +15,9 @@ impl FromSql for bool {
         }
         match value {
             Value::UInt8(x) => Ok(x != 0),
-            _ => unimplemented!(),
+            other => Err(KlickhouseError::DeserializeError(format!(
+                "expected UInt8 for bool, got {other:?}"
+            ))),
         }
     }
 }
@@ -27,7 +29,9 @@ impl FromSql for u8 {
         }
         match value {
             Value::UInt8(x) => Ok(x),
-            _ => unimplemented!(),
+            other => Err(KlickhouseError::DeserializeError(format!(
+                "expected UInt8 for u8, got {other:?}"
+            ))),
         }
     }
 }
@@ -39,7 +43,9 @@ impl FromSql for u16 {
         }
         match value {
             Value::UInt16(x) => Ok(x),
-            _ => unimplemented!(),
+            other => Err(KlickhouseError::DeserializeError(format!(
+                "expected UInt16 for u16, got {other:?}"
+            ))),
         }
     }
 }
@@ -51,7 +57,9 @@ impl FromSql for u32 {
         }
         match value {
             Value::UInt32(x) => Ok(x),
-            _ => unimplemented!(),
+            other => Err(KlickhouseError::DeserializeError(format!(
+                "expected UInt32 for u32, got {other:?}"
+            ))),
         }
     }
 }
@@ -63,7 +71,9 @@ impl FromSql for u64 {
         }
         match value {
             Value::UInt64(x) => Ok(x),
-            _ => unimplemented!(),
+            other => Err(KlickhouseError::DeserializeError(format!(
+                "expected UInt64 for u64, got {other:?}"
+            ))),
         }
     }
 }
@@ -75,7 +85,9 @@ impl FromSql for u128 {
         }
         match value {
             Value::UInt128(x) => Ok(x),
-            _ => unimplemented!(),
+            other => Err(KlickhouseError::DeserializeError(format!(
+                "expected UInt128 for u128, got {other:?}"
+            ))),
         }
     }
 }
@@ -87,7 +99,9 @@ impl FromSql for i8 {
         }
         match value {
             Value::Int8(x) => Ok(x),
-            _ => unimplemented!(),
+            other => Err(KlickhouseError::DeserializeError(format!(
+                "expected Int8 for i8, got {other:?}"
+            ))),
         }
     }
 }
@@ -99,7 +113,9 @@ impl FromSql for i16 {
         }
         match value {
             Value::Int16(x) => Ok(x),
-            _ => unimplemented!(),
+            other => Err(KlickhouseError::DeserializeError(format!(
+                "expected Int16 for i16, got {other:?}"
+            ))),
         }
     }
 }
@@ -111,7 +127,9 @@ impl FromSql for i32 {
         }
         match value {
             Value::Int32(x) => Ok(x),
-            _ => unimplemented!(),
+            other => Err(KlickhouseError::DeserializeError(format!(
+                "expected Int32 for i32, got {other:?}"
+            ))),
         }
     }
 }
@@ -123,7 +141,9 @@ impl FromSql for i64 {
         }
         match value {
             Value::Int64(x) => Ok(x),
-            _ => unimplemented!(),
+            other => Err(KlickhouseError::DeserializeError(format!(
+                "expected Int64 for i64, got {other:?}"
+            ))),
         }
     }
 }
@@ -135,7 +155,9 @@ impl FromSql for i128 {
         }
         match value {
             Value::Int128(x) => Ok(x),
-            _ => unimplemented!(),
+            other => Err(KlickhouseError::DeserializeError(format!(
+                "expected Int128 for i128, got {other:?}"
+            ))),
         }
     }
 }
@@ -147,7 +169,9 @@ impl FromSql for f32 {
         }
         match value {
             Value::Float32(x) => Ok(x),
-            _ => unimplemented!(),
+            other => Err(KlickhouseError::DeserializeError(format!(
+                "expected Float32 for f32, got {other:?}"
+            ))),
         }
     }
 }
@@ -159,7 +183,9 @@ impl FromSql for f64 {
         }
         match value {
             Value::Float64(x) => Ok(x),
-            _ => unimplemented!(),
+            other => Err(KlickhouseError::DeserializeError(format!(
+                "expected Float64 for f64, got {other:?}"
+            ))),
         }
     }
 }
@@ -171,7 +197,9 @@ impl FromSql for String {
         }
         match value {
             Value::String(x) => Ok(String::from_utf8(x)?),
-            _ => unimplemented!(),
+            other => Err(KlickhouseError::DeserializeError(format!(
+                "expected String for String, got {other:?}"
+            ))),
         }
     }
 }
@@ -196,7 +224,9 @@ impl<T: FromSql + 'static> FromSql for Vec<T> {
                 .into_iter()
                 .map(|x| T::from_sql(subtype, x))
                 .collect::<Result<Vec<_>>>()?),
-            _ => unimplemented!(),
+            other => Err(KlickhouseError::DeserializeError(format!(
+                "expected Array for Vec, got {other:?}"
+            ))),
         }
     }
 }
@@ -218,7 +248,9 @@ impl<T: FromSql + Hash + Eq, Y: FromSql> FromSql for HashMap<T, Y> {
                 }
                 Ok(out)
             }
-            _ => unimplemented!(),
+            other => Err(KlickhouseError::DeserializeError(format!(
+                "expected Map for HashMap, got {other:?}"
+            ))),
         }
     }
 }
@@ -240,7 +272,9 @@ impl<T: FromSql + Ord, Y: FromSql> FromSql for BTreeMap<T, Y> {
                 }
                 Ok(out)
             }
-            _ => unimplemented!(),
+            other => Err(KlickhouseError::DeserializeError(format!(
+                "expected Map for BTreeMap, got {other:?}"
+            ))),
         }
     }
 }
@@ -262,7 +296,9 @@ impl<T: FromSql + Hash + Eq, Y: FromSql> FromSql for IndexMap<T, Y> {
                 }
                 Ok(out)
             }
-            _ => unimplemented!(),
+            other => Err(KlickhouseError::DeserializeError(format!(
+                "expected Map for IndexMap, got {other:?}"
+            ))),
         }
     }
 }
@@ -301,7 +337,9 @@ impl<T: FromSql + Default + Copy, const N: usize> FromSql for [T; N] {
                 }
                 Ok(out)
             }
-            _ => unimplemented!(),
+            other => Err(KlickhouseError::DeserializeError(format!(
+                "expected Array for [T; N], got {other:?}"
+            ))),
         }
     }
 }
@@ -323,7 +361,7 @@ macro_rules! tuple_impls {
                     };
                     let values = match value {
                         Value::Tuple(n) => n,
-                        _ => unimplemented!(),
+                        other => return Err(KlickhouseError::DeserializeError(format!("expected Tuple value, got {other:?}"))),
                     };
                     if values.len() != subtype.len() {
                         return Err(KlickhouseError::DeserializeError(format!("unexpected type: mismatch tuple length expected {}, got {}", subtype.len(), values.len())));

@@ -183,7 +183,11 @@ impl Deserializer for LowCardinalityDeserializer {
 
                 output
             }
-            _ => unimplemented!(),
+            other => {
+                return Err(KlickhouseError::ProtocolError(format!(
+                    "unexpected type in low cardinality deserializer: {other}"
+                )))
+            }
         })
     }
 }

@@ -1,6 +1,6 @@
 use tokio::io::AsyncReadExt;
 
-use crate::{io::ClickhouseRead, values::Value, Result};
+use crate::{io::ClickhouseRead, values::Value, KlickhouseError, Result};
 
 use super::{Deserializer, DeserializerState, Type};
 
@@ -34,7 +34,9 @@ impl Deserializer for StringDeserializer {
                 }
                 Ok(out)
             }
-            _ => unimplemented!(),
+            other => Err(KlickhouseError::ProtocolError(format!(
+                "unexpected type in string deserializer: {other}"
+            ))),
         }
     }
 }

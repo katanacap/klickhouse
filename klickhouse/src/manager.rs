@@ -41,7 +41,7 @@ impl bb8::ManageConnection for ConnectionManager {
     }
 
     async fn is_valid(&self, conn: &mut Self::Connection) -> Result<(), Self::Error> {
-        let _ = conn.query_one::<UnitValue<String>>("select '';").await?;
+        conn.query_one::<UnitValue<String>>("select '';").await?;
         Ok(())
     }
 

@@ -24,7 +24,7 @@
 
   languages.rust.enable = true;
   languages.rust.channel = "nightly";
-  languages.rust.components = [ "rustc" "cargo" "rust-src" "rust-std" ];
+  languages.rust.components = [ "rustc" "cargo" "clippy" "rustfmt" "rust-src" "rust-std" ];
 
   env.RUSTC_WRAPPER = "";
   # languages.rust.mold.enable = true;

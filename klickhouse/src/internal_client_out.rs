@@ -185,7 +185,9 @@ impl<W: ClickhouseWrite> InternalClientOut<W> {
 
     #[cfg(not(feature = "compression"))]
     async fn compress_data(&mut self, _byte: u8, _block: &Block) -> Result<()> {
-        panic!("attempted to use compression when not compiled with `compression` feature in klickhouse");
+        Err(KlickhouseError::CompressionError(
+            "attempted to use compression when not compiled with `compression` feature in klickhouse".to_string(),
+        ))
     }
 
     pub async fn send_data(

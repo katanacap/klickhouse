@@ -2,6 +2,7 @@ use crate::respan::respan;
 use proc_macro2::Span;
 use quote::ToTokens;
 use std::mem;
+use syn::Token;
 use syn::{
     parse_quote, Data, DeriveInput, Expr, ExprPath, GenericArgument, GenericParam, Generics, Macro,
     Path, PathArguments, QSelf, ReturnType, Type, TypeParamBound, TypePath, WherePredicate,

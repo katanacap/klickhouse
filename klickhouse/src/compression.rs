@@ -17,7 +17,22 @@ pub async fn compress_block(block: Block, revision: u64) -> Result<(Vec<u8>, usi
     let mut raw = vec![];
     block.write(&mut raw, revision).await?;
     let raw_len = raw.len();
-    let mut compressed = Vec::<u8>::with_capacity(raw.len() + (raw.len() / 255) + 16 + 1);
+    if raw.len() > i32::MAX as usize {
+        return Err(KlickhouseError::CompressionError(format!(
+            "input too large for LZ4: {} > {}",
+            raw.len(),
+            i32::MAX
+        )));
+    }
+    let capacity = raw.len() + (raw.len() / 255) + 16 + 1;
+    if capacity > i32::MAX as usize {
+        return Err(KlickhouseError::CompressionError(format!(
+            "output buffer too large for LZ4: {} > {}",
+            capacity,
+            i32::MAX
+        )));
+    }
+    let mut compressed = Vec::<u8>::with_capacity(capacity);
     let out_len = unsafe {
         lz4::liblz4::LZ4_compress_default(
             raw.as_ptr() as *const c_char,
@@ -27,20 +42,34 @@ pub async fn compress_block(block: Block, revision: u64) -> Result<(Vec<u8>, usi
         )
     };
     if out_len <= 0 {
-        return Err(KlickhouseError::ProtocolError(
-            "invalid compression state".to_string(),
+        return Err(KlickhouseError::CompressionError(
+            "LZ4 compression failed".to_string(),
         ));
     }
     if out_len as usize > compressed.capacity() {
-        panic!("buffer overflow in compress_block?");
+        return Err(KlickhouseError::CompressionError(format!(
+            "LZ4 output ({}) exceeded buffer capacity ({})",
+            out_len,
+            compressed.capacity()
+        )));
     }
+    // SAFETY: LZ4_compress_default wrote exactly `out_len` bytes into the buffer,
+    // and we verified out_len <= capacity above.
     unsafe { compressed.set_len(out_len as usize) };
 
     Ok((compressed, raw_len))
 }
 
 pub fn decompress_block(data: &[u8], decompressed_size: u32) -> Result<Vec<u8>> {
-    let mut output = Vec::with_capacity(decompressed_size as usize + 1);
+    if data.len() > i32::MAX as usize {
+        return Err(KlickhouseError::CompressionError(format!(
+            "compressed input too large for LZ4: {} > {}",
+            data.len(),
+            i32::MAX
+        )));
+    }
+    let capacity = decompressed_size as usize + 1;
+    let mut output = Vec::with_capacity(capacity);
 
     let out_len = unsafe {
         lz4::liblz4::LZ4_decompress_safe(
@@ -51,13 +80,19 @@ pub fn decompress_block(data: &[u8], decompressed_size: u32) -> Result<Vec<u8>> 
         )
     };
     if out_len < 0 {
-        return Err(KlickhouseError::ProtocolError(
-            "malformed compressed block".to_string(),
+        return Err(KlickhouseError::CompressionError(
+            "LZ4 decompression failed: malformed compressed block".to_string(),
         ));
     }
     if out_len as usize > output.capacity() {
-        panic!("buffer overflow in decompress_block?");
+        return Err(KlickhouseError::CompressionError(format!(
+            "LZ4 decompressed output ({}) exceeded buffer capacity ({})",
+            out_len,
+            output.capacity()
+        )));
     }
+    // SAFETY: LZ4_decompress_safe wrote exactly `out_len` bytes into the buffer,
+    // and we verified out_len <= capacity above.
     unsafe { output.set_len(out_len as usize) };
 
     Ok(output)
@@ -156,6 +191,71 @@ impl<'a, R: ClickhouseRead + 'static> DecompressionReader<'a, R> {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_decompress_invalid_data_returns_error() {
+        let garbage = vec![0xDE, 0xAD, 0xBE, 0xEF, 0x01, 0x02, 0x03, 0x04];
+        let result = decompress_block(&garbage, 100);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(
+            matches!(err, KlickhouseError::CompressionError(_)),
+            "expected CompressionError, got: {err:?}"
+        );
+    }
+
+    #[test]
+    fn test_decompress_empty_input_returns_error() {
+        let result = decompress_block(&[], 100);
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            KlickhouseError::CompressionError(_)
+        ));
+    }
+
+    #[test]
+    fn test_decompress_zero_decompressed_size() {
+        // Empty data with size 0 — LZ4 should return error on empty input
+        let result = decompress_block(&[], 0);
+        // LZ4_decompress_safe returns 0 for empty input with 0 expected,
+        // which is actually a valid decompression (0 bytes)
+        // Either Ok(empty) or Err is acceptable
+        match result {
+            Ok(data) => assert!(data.is_empty()),
+            Err(e) => assert!(matches!(e, KlickhouseError::CompressionError(_))),
+        }
+    }
+
+    #[test]
+    fn test_lz4_compress_decompress_roundtrip() {
+        use std::ffi::c_char;
+
+        let original = b"Hello, ClickHouse! This is a test of LZ4 compression roundtrip.";
+
+        // Compress
+        let capacity = original.len() + (original.len() / 255) + 16 + 1;
+        let mut compressed = Vec::<u8>::with_capacity(capacity);
+        let compressed_len = unsafe {
+            lz4::liblz4::LZ4_compress_default(
+                original.as_ptr() as *const c_char,
+                compressed.as_mut_ptr() as *mut c_char,
+                original.len() as i32,
+                compressed.capacity() as i32,
+            )
+        };
+        assert!(compressed_len > 0, "LZ4 compression failed");
+        unsafe { compressed.set_len(compressed_len as usize) };
+
+        // Decompress via our function
+        let decompressed = decompress_block(&compressed, original.len() as u32).unwrap();
+        assert_eq!(&decompressed[..], &original[..]);
+    }
+}
+
 impl<R: ClickhouseRead + 'static> AsyncRead for DecompressionReader<'_, R> {
     fn poll_read(
         mut self: Pin<&mut Self>,
@@ -178,8 +278,18 @@ impl<R: ClickhouseRead + 'static> AsyncRead for DecompressionReader<'_, R> {
         }
 
         while self.position >= self.decompressed.len() {
-            let static_inner: &'static mut R =
-                unsafe { std::mem::transmute(self.inner.take().unwrap()) };
+            let inner = self
+                .inner
+                .take()
+                .ok_or_else(|| std::io::Error::other("decompression reader in invalid state"))?;
+            // SAFETY: We transmute `&'a mut R` to `&'static mut R` so the reference can be
+            // captured by the boxed future. This is safe because:
+            //   1. The future is stored in `self.block_reading_future` and polled inline.
+            //   2. When the future completes, the reference is returned and stored back in `self.inner`.
+            //   3. The future never outlives `self` (it is dropped when `DecompressionReader` is dropped).
+            //   4. While the future is alive, `self.inner` is `None`, preventing aliasing.
+            // This pattern avoids requiring `R: 'static` on the public API.
+            let static_inner: &'static mut R = unsafe { std::mem::transmute(inner) };
             let mode = self.mode;
             self.block_reading_future = Some(Box::pin(async move {
                 let value = read_compressed_blob(static_inner, mode).await?;

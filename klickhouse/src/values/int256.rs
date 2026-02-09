@@ -3,7 +3,7 @@ use std::fmt;
 use crate::{
     convert::{unexpected_type, FromSql, ToSql},
     types::Type,
-    Result, Value,
+    KlickhouseError, Result, Value,
 };
 
 /// Wrapper type for Clickhouse `Int256` type.
@@ -31,7 +31,9 @@ impl FromSql for i256 {
         }
         match value {
             Value::Int256(x) => Ok(x),
-            _ => unimplemented!(),
+            other => Err(KlickhouseError::DeserializeError(format!(
+                "expected Int256 for i256, got {other:?}"
+            ))),
         }
     }
 }
@@ -84,7 +86,9 @@ impl FromSql for u256 {
         }
         match value {
             Value::UInt256(x) => Ok(x),
-            _ => unimplemented!(),
+            other => Err(KlickhouseError::DeserializeError(format!(
+                "expected UInt256 for u256, got {other:?}"
+            ))),
         }
     }
 }
