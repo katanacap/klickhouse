@@ -4,8 +4,7 @@ use klickhouse::{Client, ClientOptions, Row};
 
 /// Helper to get a client with custom options
 async fn get_client_with_options(opts: ClientOptions) -> Client {
-    let address =
-        std::env::var("KLICKHOUSE_TEST_ADDR").unwrap_or_else(|_| "127.0.0.1:9000".into());
+    let address = std::env::var("KLICKHOUSE_TEST_ADDR").unwrap_or_else(|_| "127.0.0.1:9000".into());
     Client::connect(address, opts).await.unwrap()
 }
 
@@ -105,9 +104,7 @@ async fn test_execute_ddl_and_query() {
         .await
         .unwrap();
     client
-        .execute(
-            "CREATE TABLE test_safety_ddl (id UInt32, name String) ENGINE = Memory",
-        )
+        .execute("CREATE TABLE test_safety_ddl (id UInt32, name String) ENGINE = Memory")
         .await
         .unwrap();
 
@@ -141,12 +138,7 @@ async fn test_insert_and_read() {
         .try_init();
     let client = super::get_client().await;
 
-    super::prepare_table(
-        "test_safety_insert",
-        "id UInt32, value String",
-        &client,
-    )
-    .await;
+    super::prepare_table("test_safety_insert", "id UInt32, value String", &client).await;
 
     #[derive(Row, Debug, PartialEq, Clone)]
     struct InsertRow {
@@ -170,10 +162,7 @@ async fn test_insert_and_read() {
     ];
 
     client
-        .insert_native_block(
-            "INSERT INTO test_safety_insert FORMAT native",
-            rows.clone(),
-        )
+        .insert_native_block("INSERT INTO test_safety_insert FORMAT native", rows.clone())
         .await
         .unwrap();
 
@@ -223,7 +212,9 @@ async fn test_server_error_propagation() {
         .try_init();
     let client = super::get_client().await;
 
-    let result = client.execute("SELECT * FROM nonexistent_table_xyz_123").await;
+    let result = client
+        .execute("SELECT * FROM nonexistent_table_xyz_123")
+        .await;
     assert!(result.is_err(), "query on non-existent table should error");
     let err = result.unwrap_err();
     // Should be a ServerException, not a panic
@@ -301,17 +292,11 @@ async fn test_nullable_roundtrip() {
             id: 1,
             val: Some("present".into()),
         },
-        NullableRow {
-            id: 2,
-            val: None,
-        },
+        NullableRow { id: 2, val: None },
     ];
 
     client
-        .insert_native_block(
-            "INSERT INTO test_safety_nullable FORMAT native",
-            rows,
-        )
+        .insert_native_block("INSERT INTO test_safety_nullable FORMAT native", rows)
         .await
         .unwrap();
 
@@ -342,8 +327,7 @@ async fn test_bb8_pool() {
         .filter_level(log::LevelFilter::Info)
         .try_init();
 
-    let address =
-        std::env::var("KLICKHOUSE_TEST_ADDR").unwrap_or_else(|_| "127.0.0.1:9000".into());
+    let address = std::env::var("KLICKHOUSE_TEST_ADDR").unwrap_or_else(|_| "127.0.0.1:9000".into());
     let manager = ConnectionManager::new(address, ClientOptions::default())
         .await
         .unwrap();
@@ -384,8 +368,7 @@ async fn test_bb8_pool_connection_reuse() {
         .filter_level(log::LevelFilter::Info)
         .try_init();
 
-    let address =
-        std::env::var("KLICKHOUSE_TEST_ADDR").unwrap_or_else(|_| "127.0.0.1:9000".into());
+    let address = std::env::var("KLICKHOUSE_TEST_ADDR").unwrap_or_else(|_| "127.0.0.1:9000".into());
     let manager = ConnectionManager::new(address, ClientOptions::default())
         .await
         .unwrap();
@@ -420,8 +403,7 @@ async fn test_large_batch_insert() {
         .try_init();
     let client = super::get_client().await;
 
-    super::prepare_table("test_safety_large_batch", "id UInt32, data String", &client)
-        .await;
+    super::prepare_table("test_safety_large_batch", "id UInt32, data String", &client).await;
 
     #[derive(Row, Debug, PartialEq, Clone)]
     struct BatchRow {
@@ -437,10 +419,7 @@ async fn test_large_batch_insert() {
         .collect();
 
     client
-        .insert_native_block(
-            "INSERT INTO test_safety_large_batch FORMAT native",
-            rows,
-        )
+        .insert_native_block("INSERT INTO test_safety_large_batch FORMAT native", rows)
         .await
         .unwrap();
 
