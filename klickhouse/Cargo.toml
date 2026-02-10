@@ -37,7 +37,7 @@ name = "basic"
 [dependencies]
 # -- Main dependencies --
 tokio = { version = "1.49.0", features = ["io-util", "net", "rt", "macros", "time"] }
-socket2 = { version = "0.5", features = ["all"] }
+socket2 = { version = "0.6", features = ["all"] }
 async-trait = "0.1.89"
 thiserror = "2.0.18"
 log = "0.4.29"
